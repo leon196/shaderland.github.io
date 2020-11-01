@@ -113,8 +113,8 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 	// shader hot-reload
 	socket = io('http://localhost:5776');
 	socket.on('change', function(data) { 
-		if (data.path.includes("demo/shader/")) {
-			const url = data.path.substr("demo/shader/".length);
+		if (data.path.includes("shader/")) {
+			const url = data.path.substr("shader/".length);
 			loadFiles("shader/",[url], function(shade) {
 				shaders[url] = shade[url];
 				loadMaterials();
