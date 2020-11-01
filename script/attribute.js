@@ -1,11 +1,9 @@
 
 var attributesLine = {position:[],indices:{numComponents:2,data:[]},seed:{numComponents:4,data:[]}};
 
-var attributesPoint = {position:[],seed:{numComponents:4,data:[]}};
+var attributesPoint = { position: [] };
 for (var index = 0; index < pointCount; ++index) {
-	var rnd = [Math.random()*2-1,Math.random()*2-1,Math.random()*2-1];
-	attributesPoint.position.push(0,0,0);
-	attributesPoint.seed.data.push(rnd[0],rnd[1],rnd[2],index/(pointCount-1));
+	attributesPoint.position.push(index / (pointCount - 1), index, 0);
 }
 
 for (var index = 0; index < cubeCount; ++index) {

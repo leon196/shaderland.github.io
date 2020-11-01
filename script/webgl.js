@@ -7,7 +7,7 @@ var button = document.getElementById('button');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], function(shaders)
+loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag','geometry.vert','color.frag'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	const v3 = twgl.v3;
@@ -17,10 +17,11 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 	const geometryQuad = twgl.createBufferInfoFromArrays(gl, {
 		position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0]
 	});
+	const geometry = twgl.createBufferInfoFromArrays(gl, attributesPoint);
 
 	// camera
 	var fieldOfView = 80;
-	var camera = m4.lookAt([1, 2, -4], [0, 0, 0], [0, 1, 0]);
+	var camera = m4.lookAt([0, 0.1, -1], [0, 0, 0], [0, 1, 0]);
 	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 
 	// framebuffers
@@ -32,6 +33,7 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 	var materials = {};
 	var materialMap = {
 		'blur': ['screen.vert', 'blur.frag'],
+		'geometry': ['geometry.vert', 'color.frag'],
 		'test': ['screen.vert', 'test.frag'],
 		'screen': ['screen.vert', 'screen.frag']
 	};
@@ -39,6 +41,7 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 	var uniforms = {
 		time: 0,
 		resolution: [gl.canvas.width, gl.canvas.height],
+		view: m4.inverse(camera),
 		viewProjection: m4.multiply(projection, m4.inverse(camera)),
 	};
 
@@ -52,15 +55,20 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 		var deltaTime = elapsed - uniforms.time;
 		uniforms.time = elapsed;
 
+		// camera = m4.lookAt([Math.cos(elapsed*.1), 0.1, Math.sin(elapsed*.1)], [0, 0, 0], [0, 1, 0]);
+		uniforms.view = m4.inverse(camera);
+		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
+
 		// render scene
 		gl.bindFramebuffer(gl.FRAMEBUFFER, frameScreen.framebuffer);
 		gl.clearColor(0,0,0,1);
 		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+		gl.enable(gl.DEPTH_TEST);
 		// gl.enable(gl.BLEND);
 		// gl.blendFunc(gl.ONE, gl.ONE);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		// draw(materials['geometry'], geometryLine, gl.LINES);
-		drawFrame(materials['test'], geometryQuad, frameScreen.framebuffer);
+		draw(materials['geometry'], geometry, gl.POINTS);
+		// drawFrame(materials['test'], geometryQuad, frameScreen.framebuffer);
 
 		// gaussian blur
 		var iterations = 8;
@@ -103,11 +111,13 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag'], funct
 		for (var index = 0; index < frameToResize.length; ++index)
 			twgl.resizeFramebufferInfo(gl, frameToResize[index]);
 		uniforms.resolution = [gl.canvas.width, gl.canvas.height];
+		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 	}
 	function loadMaterials() {
 		Object.keys(materialMap).forEach(function(key) {
 			materials[key] = twgl.createProgramInfo(gl,
-				[shaders[materialMap[key][0]],shaders[materialMap[key][1]]]); });
+				[shaders[materialMap[key][0]],shaders[materialMap[key][1]]]);
+		});
 	}
 
 	// shader hot-reload
