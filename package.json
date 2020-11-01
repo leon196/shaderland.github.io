@@ -1,0 +1,28 @@
+{
+  "name": "shaderland.github.io",
+  "version": "1.0.0",
+  "description": "website",
+  "main": "index.js",
+  "scripts": {
+    "server": "http-server ./",
+    "watch": "chokidar-socket-emitter -p ./",
+    "dev": "concurrently --kill-others \"npm run server\" \"npm run watch\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaderland/shaderland.github.io.git"
+  },
+  "keywords": [
+    "website"
+  ],
+  "author": "Leon Denise",
+  "license": "CC-BY-NC-4.0",
+  "bugs": {
+    "url": "https://github.com/shaderland/shaderland.github.io/issues"
+  },
+  "homepage": "https://github.com/shaderland/shaderland.github.io#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "concurrently": "^5.3.0"
+  }
+}
