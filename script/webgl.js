@@ -1,38 +1,30 @@
-// Leon Denise 
-// Cookie Party Invitro 2019
+// Leon Denise 2020/10/01
 
-window.onload = function () {
+window.onload = function() {
 
 var button = document.getElementById('button');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag','geometry.vert','color.frag'], function(shaders)
+loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	const v3 = twgl.v3;
 	const m4 = twgl.m4;
 
 	// geometry
-	const geometryQuad = twgl.createBufferInfoFromArrays(gl, {
-		position: [-1, -1, 0, 1, -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, 1, 1, 0]
-	});
-	const geometry = twgl.createBufferInfoFromArrays(gl, attributesPoint);
+	const geometryQuad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
+	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.wire.cross, 10));
+	const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1000), 1));
 
 	// camera
-	var fieldOfView = 80;
-	var camera = m4.lookAt([0, 0.1, -1], [0, 0, 0], [0, 1, 0]);
+	var fieldOfView = 60;
+	var eye = [0.1, 0.1, 2];
+	var camera = m4.lookAt(eye, [0, 0, 0], [0, 1, 0]);
 	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
-
-	// framebuffers
-	var frameScreen = twgl.createFramebufferInfo(gl);
-	var frameBlurA = twgl.createFramebufferInfo(gl);
-	var frameBlurB = twgl.createFramebufferInfo(gl);
-	var frameToResize = [frameScreen, frameBlurA, frameBlurB];
 
 	var materials = {};
 	var materialMap = {
-		'blur': ['screen.vert', 'blur.frag'],
 		'geometry': ['geometry.vert', 'color.frag'],
 		'test': ['screen.vert', 'test.frag'],
 		'screen': ['screen.vert', 'screen.frag']
@@ -43,80 +35,61 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag','geomet
 		resolution: [gl.canvas.width, gl.canvas.height],
 		view: m4.inverse(camera),
 		viewProjection: m4.multiply(projection, m4.inverse(camera)),
+		camera: eye,
 	};
 
 	loadMaterials();
 
-
 	function render(elapsed)
 	{
+		// time
 		elapsed /= 1000;
-
 		var deltaTime = elapsed - uniforms.time;
 		uniforms.time = elapsed;
 
+		// camera
 		// camera = m4.lookAt([Math.cos(elapsed*.1), 0.1, Math.sin(elapsed*.1)], [0, 0, 0], [0, 1, 0]);
 		uniforms.view = m4.inverse(camera);
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
-		// render scene
-		gl.bindFramebuffer(gl.FRAMEBUFFER, frameScreen.framebuffer);
+		// prepare render
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.clearColor(0,0,0,1);
 		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 		gl.enable(gl.DEPTH_TEST);
-		// gl.enable(gl.BLEND);
-		// gl.blendFunc(gl.ONE, gl.ONE);
+		gl.disable(gl.CULL_FACE);
+		// gl.enable(gl.CULL_FACE);
+		// gl.cullFace(gl.BACK);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		draw(materials['geometry'], geometry, gl.POINTS);
-		// drawFrame(materials['test'], geometryQuad, frameScreen.framebuffer);
-
-		// gaussian blur
-		var iterations = 8;
-		var writeBuffer = frameBlurA;
-		var readBuffer = frameBlurB;
-		for (var i = 0; i < iterations; i++) {
-			var radius = (iterations - i - 1)
-			if (i === 0) uniforms.frame = frameScreen.attachments[0];
-			else uniforms.frame = readBuffer.attachments[0];
-			uniforms.flip = true;
-			uniforms.direction = i % 2 === 0 ? [radius, 0] : [0, radius];
-			drawFrame(materials['blur'], geometryQuad, writeBuffer.framebuffer);
-			var t = writeBuffer;
-			writeBuffer = readBuffer;
-			readBuffer = t;
-		}
-
-		// final composition
-		uniforms.frame = frameScreen.attachments[0];
-		uniforms.frameBlur = writeBuffer.attachments[0];
-		drawFrame(materials['screen'], geometryQuad, null);
-
+		
+		// render scene
+		draw(materials['geometry'], clones, gl.TRIANGLES);
+		
+		// loop
 		requestAnimationFrame(render);
 	}
-	function drawFrame(shader, geometry, frame) {
-		gl.bindFramebuffer(gl.FRAMEBUFFER, frame);
-		gl.clearColor(0,0,0,1);
-		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		draw(shader, geometry, gl.TRIANGLES);
-	}
-	function draw(shader, geometry, mode) {
-		gl.useProgram(shader.program);
-		twgl.setBuffersAndAttributes(gl, shader, geometry);
-		twgl.setUniforms(shader, uniforms);
+
+	function draw(material, geometry, mode)
+	{
+		gl.useProgram(material.program);
+		twgl.setBuffersAndAttributes(gl, material, geometry);
+		twgl.setUniforms(material, uniforms);
 		twgl.drawBufferInfo(gl, geometry, mode);
 	}
-	function onWindowResize() {
+
+	function onWindowResize()
+	{
 		twgl.resizeCanvasToDisplaySize(gl.canvas);
-		for (var index = 0; index < frameToResize.length; ++index)
-			twgl.resizeFramebufferInfo(gl, frameToResize[index]);
 		uniforms.resolution = [gl.canvas.width, gl.canvas.height];
 		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 	}
-	function loadMaterials() {
+
+	function loadMaterials()
+	{
 		Object.keys(materialMap).forEach(function(key) {
-			materials[key] = twgl.createProgramInfo(gl,
-				[shaders[materialMap[key][0]],shaders[materialMap[key][1]]]);
+			var program = twgl.createProgramInfo(gl,
+				[shaders[materialMap[key][0]], shaders[materialMap[key][1]]]);
+			if (program !== null) materials[key] = program;
 		});
 	}
 
@@ -137,4 +110,4 @@ loadFiles('shader/',['screen.vert','blur.frag','screen.frag','test.frag','geomet
 	requestAnimationFrame(render);
 	button.innerHTML = '';
 });
-}
+};

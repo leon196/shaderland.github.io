@@ -16,14 +16,15 @@ function loadFile(url, callback)
 		callback(e);
 	}
 
-	// request.open('get', url + "?t=" + (new Date()).getTime(), true);
-	request.open('get', url, true);
+	request.open('get', url + "?t=" + (new Date()).getTime(), true);
+	// request.open('get', url, true);
 	request.addEventListener('load', handleLoad, false);
 	request.addEventListener('error', handleError, false);
 	request.send();
 }
 
-function loadFiles(path, files, callback, callbackProgress) {
+function loadFiles(path, files, callback, callbackProgress)
+{
 	var numToLoad = 0;
 	var loadedFiles = {};
 
