@@ -1,0 +1,1 @@
+FOR /F "tokens=*" %%G IN ('dir /b *.webm') DO ffmpeg -i "%%G" -vf "scale='min(300,iw)':'-1'" "%%~nG_resized.webm" -y

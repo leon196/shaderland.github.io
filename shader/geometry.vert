@@ -4,11 +4,13 @@ attribute vec4 position;
 attribute vec3 normal, quantity;
 attribute vec2 texcoord;
 
+uniform sampler2D frame;
 uniform vec3 camera;
 uniform mat4 view, viewProjection;
 uniform vec2 resolution;
 uniform float time;
 
+varying vec2 uv;
 varying vec4 color;
 
 const float PI = 3.1415;
@@ -41,36 +43,18 @@ vec3 displace(float offset)
 
 void main ()
 {
+	uv = texcoord*2.-1.;
 	vec4 pos = position;
-	vec2 uv = texcoord*2.-1.;
-	// pos.yx *= rotation((sin(time+quantity.x))*quantity.x*.5);
-	// vec3 n = (view * vec4(normal, 0)).xyz;
-	// float anim = fract(time+p.z);
-	float size = 1./200.;// * sin(anim*3.14);
-	// size *= 1.-texcoord.y;
-	// size *= smoothstep(1.0, 0.5, texcoord.y);
-	// p.z = anim;
-	float offset = texcoord.y * 20. + time;// + hash11(quantity.y+45.);
-	vec3 p = displace(offset);
-	vec3 q = displace(offset+0.1);
-	vec3 z = normalize(q - p);
-	vec3 c = normalize(camera - p);
-	vec3 x = normalize(cross(c, z));
+	float size = 1./100.;
+	vec3 p = vec3(hash21(quantity.y), 0);
+	vec4 ray = texture2D(frame, p.xy);
+	p.z = ray.r - 2.;
+	p.xy = p.xy * 2. - 1.;
+	vec3 z = normalize(camera - pos.xyz);
+	vec3 x = normalize(cross(z, vec3(0,1,0)));
 	vec3 y = normalize(cross(z, x));
-	vec3 n = normalize(cross(z, y));
-	// vec3 z = normalize(camera - p);
-	// vec3 z = normalize(-p);
-	// z.xz *= rotation(offset);
-	// vec3 x = normalize(cross(z, vec3(0,1,0)));
-	// vec3 y = normalize(cross(z, x));
-	// vec3 n = normalize(cross(z,y));
-	pos.xyz = x * uv.x + y * uv.y;
-	pos.xyz = pos.xyz * size + p;
+	pos.xyz = (x * uv.x - y * uv.y) * size * ray.y + p;
 	gl_Position = viewProjection * pos;
-	color = vec4(1);
-	// color.rgb *= dot(n, c)*.5+.5;
-	// color.rgb = vec3(1)*smoothstep(-1.5,1.,pos.z);
-	color.rgb = mix(color.rgb, vec3(1,0,0), smoothstep(.5,-2.5,pos.y));
-	// gl_PointSize = 4.;
-	// color.rgb *= texcoord.x*0.5+0.5;
+	color = vec4(ray.y);
+	uv = texcoord;
 }

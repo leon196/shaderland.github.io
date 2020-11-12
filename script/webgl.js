@@ -6,16 +6,16 @@ var button = document.getElementById('button');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag'], function(shaders)
+loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
+	gl.getExtension('OES_texture_float');
 	const v3 = twgl.v3;
 	const m4 = twgl.m4;
 
 	// geometry
-	const geometryQuad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
-	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.wire.cross, 10));
-	const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1000), 1));
+	const quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
+	const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), 512*512));
 
 	// camera
 	var fieldOfView = 60;
@@ -23,11 +23,19 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var camera = m4.lookAt(eye, [0, 0, 0], [0, 1, 0]);
 	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 
+	const attachments = [
+		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
+	]
+	const width = 512;
+	const height = 512;
+	const frame = twgl.createFramebufferInfo(gl, attachments, width, height);
+
 	var materials = {};
 	var materialMap = {
 		'geometry': ['geometry.vert', 'color.frag'],
 		'test': ['screen.vert', 'test.frag'],
-		'screen': ['screen.vert', 'screen.frag']
+		'ray': ['screen.vert', 'ray.frag'],
+		'screen': ['screen.vert', 'screen.frag'],
 	};
 
 	var uniforms = {
@@ -48,18 +56,27 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.time = elapsed;
 
 		// camera
-		// camera = m4.lookAt([Math.cos(elapsed*.1), 0.1, Math.sin(elapsed*.1)], [0, 0, 0], [0, 1, 0]);
+		// var radius = 4;
+		// uniforms.camera = [Math.cos(elapsed * .1) * radius, 0.1, Math.sin(elapsed * .1) * radius];
+		camera = m4.lookAt(uniforms.camera, [0, 0, 0], [0, 1, 0]);
 		uniforms.view = m4.inverse(camera);
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
+
+		// rays
+		gl.bindFramebuffer(gl.FRAMEBUFFER, frame.framebuffer);
+		gl.clearColor(0, 0, 0, 1);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		gl.viewport(0, 0, frame.width, frame.height);
+		draw(materials['ray'], quad, gl.TRIANGLES);
+		uniforms.frame = frame.attachments[0];
 
 		// prepare render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.clearColor(0,0,0,1);
 		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 		gl.enable(gl.DEPTH_TEST);
-		gl.disable(gl.CULL_FACE);
-		// gl.enable(gl.CULL_FACE);
-		// gl.cullFace(gl.BACK);
+		gl.enable(gl.CULL_FACE);
+		gl.cullFace(gl.BACK);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		
 		// render scene
@@ -80,6 +97,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	function onWindowResize()
 	{
 		twgl.resizeCanvasToDisplaySize(gl.canvas);
+		twgl.resizeFramebufferInfo(gl, frame, attachments);
 		uniforms.resolution = [gl.canvas.width, gl.canvas.height];
 		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 	}
