@@ -6,6 +6,24 @@ uniform float time;
 
 varying vec2 texcoord;
 
+// Dave Hoskins
+// https://www.shadertoy.com/view/4djSRW
+float hash11(float p) { p = fract(p * .1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float hash12(vec2 p) { vec3 p3  = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float hash13(vec3 p3) { p3  = fract(p3 * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2 hash21(float p) { vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx+p3.yz)*p3.zy); }
+vec3 hash31(float p) { vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx+33.33); return fract((p3.xxy+p3.yzz)*p3.zyx); }
+
+// Inigo Quilez
+// https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+float box( vec3 p, vec3 b )
+{
+  vec3 q = abs(p) - b;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+#define repeat(p,r) (mod(p+r/2.,r)-r/2.)
+
 vec3 look(vec3 from, vec3 to, vec2 uv)
 {
     vec3 z = normalize(to-from);
@@ -20,7 +38,7 @@ mat2 rot(float a)
     return mat2(c,-s,s,c);
 }
 
-float map(vec3 p)
+float kif(vec3 p)
 {
     float scene = 1.0;
     float r = 0.5;
@@ -38,11 +56,24 @@ float map(vec3 p)
     return scene;
 }
 
+float map(vec3 p)
+{
+    float scene = 1.0;
+    p = repeat(p,2.);
+    scene = box(p, vec3(0.5));
+    return scene;
+}
+
 void main()
 {
     vec3 color = vec3(0);
     vec2 uv = (texcoord*2.-1.);
-    vec3 eye = vec3(0,0,-3);
+    vec3 eye = vec3(1,1.,-1);
+    float t = time;
+    float radius = 3.+sin(t);
+    eye.xz *= rot(sin(t)*.1);
+    // eye.xy *= rot(t);
+    // vec3 eye = (hash31(floor(t))*2.-1.)*radius;
     vec3 ray = look(eye, vec3(0), uv);
     float total = 0.0;
     float shade = 0.0;
@@ -57,5 +88,5 @@ void main()
         }
         total += dist;
     }
-    gl_FragColor = vec4(total, shade, 0, 1);
+    gl_FragColor = vec4(eye + ray * total, pow(shade, 0.5));
 }

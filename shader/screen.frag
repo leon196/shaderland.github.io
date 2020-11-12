@@ -1,6 +1,6 @@
 precision mediump float;
 
-uniform sampler2D frame, frameBlur;
+uniform sampler2D frame, scene;
 uniform vec2 resolution;
 uniform float time;
 
@@ -10,10 +10,10 @@ float random (in vec2 st) { return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43
 
 void main() {
 	// float lod = 50.;
-	vec4 color = texture2D(frame, texcoord);
-	vec4 blur = texture2D(frameBlur, texcoord);
+	vec4 color = texture2D(scene, texcoord);
 
-    vec2 p = (texcoord*2.-1.)*vec2(resolution.x/resolution.y, 1);
+    vec2 p = (texcoord)*vec2(resolution.x/resolution.y, 1)*4.;
+	color = mix(color, fract(abs(texture2D(frame, p))), step(p.x, 1.) * step(p.y, 1.));
 
 	gl_FragColor = color;
 	// gl_FragColor = mix(color, blur, smoothstep(0., 1.,length(p)));
