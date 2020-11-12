@@ -2,7 +2,7 @@ precision mediump float;
 
 uniform sampler2D frame;
 uniform vec2 resolution;
-uniform float time;
+uniform float time, tick, seed;
 
 varying vec2 texcoord;
 
@@ -68,12 +68,12 @@ void main()
 {
     vec3 color = vec3(0);
     vec2 uv = (texcoord*2.-1.);
-    vec3 eye = vec3(1,1.,-1);
+    // vec3 eye = vec3(1,1.,-1);
     float t = time;
-    float radius = 3.+sin(t);
-    eye.xz *= rot(sin(t)*.1);
-    // eye.xy *= rot(t);
-    // vec3 eye = (hash31(floor(t))*2.-1.)*radius;
+    float radius = 3.;
+    // float radius = 3.+sin(t);
+    // eye.xz *= rot(sin(t)*.1);
+    vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
     vec3 ray = look(eye, vec3(0), uv);
     float total = 0.0;
     float shade = 0.0;

@@ -13,9 +13,28 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	const v3 = twgl.v3;
 	const m4 = twgl.m4;
 
-	// geometry
+	// frames point cloud
+	var compute = true;
+	var currentFrame = 0;
+	const width = 256;
+	const height = 256;
+	const count = 10;
+	const attachments = [ 
+		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
+	]
+	const frames = [];
+	// const clones = [];
+	for (var index = 0; index < count; ++index)
+	{
+		frames.push(twgl.createFramebufferInfo(gl, attachments, width, height));
+		// clones.push(twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width*height)));
+	}
+	
+	const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width * height));
+	
+	// post process
+	const scene = twgl.createFramebufferInfo(gl);
 	const quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
-	const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), 256*256));
 
 	// camera
 	var fieldOfView = 60;
@@ -23,15 +42,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var camera = m4.lookAt(eye, [0, 0, 0], [0, 1, 0]);
 	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
 
-	const attachments = [
-		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
-	]
-	const width = 256;
-	const height = 256;
-	const frame = twgl.createFramebufferInfo(gl, attachments, width, height);
-	const scene = twgl.createFramebufferInfo(gl);
-	var compute = true;
-
+	// materials
 	var materials = {};
 	var materialMap = {
 		'geometry': ['geometry.vert', 'color.frag'],
@@ -40,8 +51,11 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		'screen': ['screen.vert', 'screen.frag'],
 	};
 
+	// uniforms
 	var uniforms = {
 		time: 0,
+		tick: 0,
+		seed: Math.random()*1000,
 		resolution: [gl.canvas.width, gl.canvas.height],
 		view: m4.inverse(camera),
 		viewProjection: m4.multiply(projection, m4.inverse(camera)),
@@ -68,18 +82,23 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.view = m4.inverse(camera);
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
+
 		if (compute)
 		{
 			// rays
+			const frame = frames[currentFrame];
 			gl.bindFramebuffer(gl.FRAMEBUFFER, frame.framebuffer);
 			gl.clearColor(0, 0, 0, 1);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			gl.viewport(0, 0, frame.width, frame.height);
 			draw(materials['ray'], quad, gl.TRIANGLES);
-			uniforms.frame = frame.attachments[0];
-			compute = false;
+			// currentFrame = (currentFrame + 1) % count;
+			if (++currentFrame == count)
+			{
+				compute = false;
+			}
 		}
-
+		
 		// prepare render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, scene.framebuffer);
 		gl.clearColor(0,0,0,1);
@@ -90,8 +109,13 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 		
 		// render scene
-		draw(materials['geometry'], clones, gl.TRIANGLES);
+		for (var index = 0; index < count; ++index)
+		{
+			uniforms.frame = frames[index].attachments[0];
+			draw(materials['geometry'], clones, gl.TRIANGLES);
+		}
 
+		uniforms.frame = frames[Math.floor(elapsed%count)].attachments[0];
 		uniforms.scene = scene.attachments[0];
 
 		// final render
@@ -105,8 +129,11 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// post process
 		draw(materials['screen'], quad, gl.TRIANGLES);
 		
+		uniforms.tick++;
+		
 		// loop
 		requestAnimationFrame(render);
+
 	}
 
 	function draw(material, geometry, mode)
