@@ -6,7 +6,7 @@ var button = document.getElementById('button');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag'], function(shaders)
+loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag','point.vert'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	gl.getExtension('OES_texture_float');
@@ -18,7 +18,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var currentFrame = 0;
 	const width = 128;
 	const height = 128;
-	const count = 10;
+	const count = 20;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
@@ -34,6 +34,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width * height));
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.quad, width * height));
 	const clones = twgl.createBufferInfoFromArrays(gl, geometry.points(width * height));
+	var geometries = [];
 	
 	// post process
 	const scene = twgl.createFramebufferInfo(gl);
@@ -47,6 +48,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var materials = {};
 	var materialMap = {
 		'geometry': ['geometry.vert', 'color.frag'],
+		'point': ['point.vert', 'color.frag'],
 		'test': ['screen.vert', 'test.frag'],
 		'ray': ['screen.vert', 'ray.frag'],
 		'screen': ['screen.vert', 'screen.frag'],
@@ -96,7 +98,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		// if (compute)
 		// {
-		// if (keyboard.Space.down)
+		if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
 			// position
@@ -108,6 +110,17 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			uniforms.mode = 1;
 			setFramebuffer(frames.color[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
+
+			var positions = new Float32Array(width * height * 4);
+			var colors = new Float32Array(width * height * 4);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position[currentFrame].framebuffer);
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, positions);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color[currentFrame].framebuffer);
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, colors);
+			geometries.push(twgl.createBufferInfoFromArrays(gl, {
+				position: { data: positions, numComponents: 4},
+				color: { data: colors, numComponents: 4},
+			}));
 
 			currentFrame = (currentFrame + 1) % count;
 			keyboard.Space.down = false;
@@ -141,13 +154,17 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		setFramebuffer(scene);
 		
 		// render scene
-		for (var index = 0; index < count; ++index)
+		// for (var index = 0; index < count; ++index)
+		// {
+		// 	uniforms.framePosition = frames.position[index].attachments[0];
+		// 	uniforms.frameColor = frames.color[index].attachments[0];
+		// 	draw(materials['geometry'], clones, gl.POINTS);
+		// }
+		for (var index = 0; index < geometries.length; ++index)
 		{
-			uniforms.framePosition = frames.position[index].attachments[0];
-			uniforms.frameColor = frames.color[index].attachments[0];
-			draw(materials['geometry'], clones, gl.POINTS);
+			draw(materials['point'], geometries[index], gl.POINTS);
 		}
-
+		
 		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
 		// var animatedFrame = Math.floor((elapsed) % count);
 		var previousFrame = (currentFrame + count - 1) % count;

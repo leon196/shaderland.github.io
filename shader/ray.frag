@@ -101,6 +101,11 @@ float map(vec3 p)
     material = shape < scene ? 0.0 : material;
     rough = shape < scene ? 0.1 : 0.5;
     scene = min(scene, shape);
+    
+    shape = p.y;
+    material = shape < scene ? 0. : material;
+    rough = shape < scene ? 0.5 : 0.;
+    scene = min(scene, shape);
     return scene;
 }
 
@@ -117,7 +122,7 @@ void main()
     uv += (hash21(hash12(texcoord*frameResolution))*2.-1.)*1./frameResolution;
     // vec3 eye = vec3(1,1.,-1.5);
     vec3 eye = camera;
-    eye.xz *= rot(3.14/4.);
+    // eye.xz *= rot(3.14/4.);
     float t = (currentFrame / count) * TAU;// + seed;
     // float radius = 3.;
     // float radius = 8.;

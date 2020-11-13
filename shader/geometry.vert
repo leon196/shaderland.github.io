@@ -11,7 +11,7 @@ uniform vec2 resolution;
 uniform float time;
 
 varying vec2 uv;
-varying vec4 color;
+varying vec4 vColor;
 
 const float PI = 3.1415;
 
@@ -57,7 +57,7 @@ void main ()
 	// uv = texcoord*2.-1.;
 	// uv = position.xy;
 	// vec4 pos = position;
-	// float size = 1./400.;
+	float size = 1./400.;
 	float id = position.y;
 	vec2 p = hash21(id);
 	// p = normalize(p) * pow(length(p), 0.5);
@@ -73,7 +73,7 @@ void main ()
 	gl_Position = viewProjection * pos;
 	// gl_Position.xy += vec2(uv.x, -uv.y) * 0.01;
 	gl_PointSize = 2.;
-	color = texture2D(frameColor, p);//*(0.8+.2*hash11(quantity.y)));
+	vColor = texture2D(frameColor, p);//*(0.8+.2*hash11(quantity.y)));
 	// color = vec4(getNormal(p), 1);
 	// uv = texcoord;
 }
