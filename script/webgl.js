@@ -85,7 +85,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
 
-		if (compute)
+		// if (compute)
+		// {
+		if (keyboard.Space.down)
 		{
 			// position
 			uniforms.mode = 0;
@@ -97,20 +99,23 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			setFramebuffer(frames.color[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
-			// until
-			if (++currentFrame == count)
-			{
-				compute = false;
-			}
+			currentFrame = (currentFrame + 1) % count;
+			keyboard.Space.down = false;
 		}
-		else
-		{
-			if (keyboard.Space.down)
-			{
-				compute = true;
-				currentFrame = 0;
-			}
-		}
+		// 	// until
+		// 	if (++currentFrame == count)
+		// 	{
+		// 		compute = false;
+		// 	}
+		// }
+		// else
+		// {
+		// 	if (keyboard.Space.down)
+		// 	{
+		// 		compute = true;
+		// 		currentFrame = 0;
+		// 	}
+		// }
 		
 		// prepare render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, scene.framebuffer);
@@ -130,7 +135,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		}
 
 		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
-		var animatedFrame = Math.floor((elapsed * 4) % count);
+		var animatedFrame = Math.floor((elapsed) % count);
 		uniforms.framePosition = frames.position[animatedFrame].attachments[0];
 		uniforms.frameColor = frames.color[animatedFrame].attachments[0];
 		uniforms.scene = scene.attachments[0];

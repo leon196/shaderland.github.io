@@ -98,14 +98,15 @@ void main()
     vec3 y = normalize(cross(z,x));
     float radius = .5;
 
-    eye += (x * cos(t) + y * sin(t))*radius;
+    vec3 target = vec3(0);
+    target += (x * cos(t) + y * sin(t))*radius;
     // eye.xz *= rot(t * 0.1);
     // eye.yz *= rot(t * 0.1);
     // eye.yx *= rot(t * 0.1);
     // float angle = t;
     // vec2 offset = vec2(cos(angle), sin(angle))/100.;
     // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    vec3 ray = look(eye, vec3(0), uv);
+    vec3 ray = look(eye, target, uv);
     float total = 0.0;
     float shade = 0.0;
     float dither = hash12(texcoord * resolution);
@@ -132,8 +133,8 @@ void main()
     else// if (mode == MODE_COLOR)
     {
         vec3 normal = getNormal(eye + ray * total);
-        vec3 color = vec3(1,0,0) * pow(dot(normal, vec3(0,1,0))*0.5+0.5, 5.);
-        color += vec3(0,0,1) * pow(dot(normal, normalize(vec3(0,1,1)))*0.5+0.5, 0.5);
+        vec3 color = vec3(1,.8,.8) * pow(dot(normal, vec3(0,1,0))*0.5+0.5, 5.);
+        color += vec3(.8,.8,1) * pow(dot(normal, normalize(vec3(0,1,1)))*0.5+0.5, 0.5);
         color *= pow(dot(normal, -ray)*0.5+0.5, 2.);
         gl_FragColor = vec4(color*shade, 1);
     }
