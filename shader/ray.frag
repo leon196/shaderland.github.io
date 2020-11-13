@@ -85,6 +85,35 @@ float kif(vec3 p)
     return scene;
 }
 
+float city(vec3 p)
+{
+    vec3 pp = p;
+    float scene = 1.0;
+    float shape = 1.0;
+    rough = 0.1;
+    float r = .2;
+    float a = 1.0;
+    float t =  seed;//+tick*.001;
+    const int count = 16;
+    for (int index = 0; index < count; ++index)
+    {
+        p = abs(p)-r*a;
+        p.xz *= rot(t/a);
+        // p.yz *= rot(sin(t/a));
+        // shape = length(p)-0.1*a;
+        shape = max(p.x, max(p.y, p.z));
+        // shape = box(p, vec3(0.1*a));
+        material = shape < scene ? float(index) : material;
+        scene = min(scene, shape);
+        a /= 1.2;
+    }
+    scene = abs(scene)-0.001;
+    // scene = max(-scene, 0.);
+    // scene = max(-box(camera-pp, vec3(0.1)), scene);
+    // scene = max(-length(camera-pp)+0.05, scene);
+    return scene;
+}
+
 // float ground(vec3 p)
 // {
 //     shape = p.y;
@@ -99,7 +128,8 @@ float map(vec3 p)
     float shape = 1.0;
     // p = repeat(p,2.);
     // scene = box(p, vec3(0.5));
-    scene = kif(p);
+    // scene = kif(p);
+    scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
     // rough = shape < scene ? 0.1 : 0.5;
@@ -114,8 +144,8 @@ float map(vec3 p)
 
 vec3 getNormal(vec3 p)
 {
-	vec2 e = vec2(.001, 0.);
-	return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));
+	vec2 e = vec2(.0001, 0.);
+	return normalize(.00001+vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));
 }
 
 void main()
@@ -125,19 +155,21 @@ void main()
     uv += (hash21(hash12(texcoord*frameResolution))*2.-1.)*1./frameResolution;
     // vec3 eye = vec3(1,1.,-1.5);
     vec3 eye = camera;
-    eye.xz *= rot(3.14/4.);
+    // eye -= target;
+    // eye.xz *= rot(3.14/4.);
+    // eye += target;
     float t = (currentFrame / count) * TAU;// + seed;
     // float radius = 3.;
     // float radius = 8.;
 
-    const int rebounces = 2;
+    const int rebounces = 1;
     int bounces = rebounces;
 
     // vec3 target = vec3(0);
     // target += (hash31(tick)*2.-1.)*.1;
     vec3 at = target;
     at += (hash32(texcoord*1654.+tick)*2.-1.)*.1;
-    
+    // at.xz *= rot(3.14);
     // vec3 z = normalize(eye - target);
     // // eye = z * clamp(length(target - eye), 0., 1.);
     // vec3 x = normalize(cross(z,vec3(0,1,0)));
@@ -155,9 +187,10 @@ void main()
     // float angle = t;
     // vec2 offset = vec2(cos(angle), sin(angle))/100.;
     // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    float dither = hash12(texcoord * resolution);
+    float dither = hash12(texcoord * resolution + tick);
     vec3 ray = look(eye, at, uv);
-    vec3 pos = eye + ray * dither * 0.1;
+    // ray.xz *= rot(3.14/4.);
+    vec3 pos = eye;// + ray * dither * 0.1;
     float total = 0.0;
     float shade = 1.0;
     gl_FragColor = vec4(0);
@@ -180,18 +213,19 @@ void main()
             }
             else if (mode == MODE_COLOR)
             {
-                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*material*0.1);
+                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(material*0.05));
                 vec3 normal = getNormal(pos);
                 float light = pow(dot(normal, -ray)*0.5+0.5, 2.);
                 // palette *= 1.-mod(material, 2.);
-                color += palette;// * float(bounces)/float(rebounces);
+                color += palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
                 // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
                 if (bounces == rebounces)
                 {
                     color = palette;
                     shade = float(steps-index)/float(steps);
                 }
-                gl_FragColor = vec4(clamp(color * shade * light/float(rebounces-bounces+1), 0., 1.), 1);
+                gl_FragColor = vec4(clamp(color * shade * light, 0., 1.), 1);
+                // gl_FragColor = floor(gl_FragColor*lod)/lod;
                 if (--bounces == 0)
                 {
                     break;

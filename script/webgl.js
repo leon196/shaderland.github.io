@@ -80,7 +80,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// uniforms.time = elapsed;
 
 		mouse.update();
-		camera.update();
+		camera.update(deltaTime);
 
 		var updateSeed = keyboard.R.down;
 		if (updateSeed)
@@ -94,9 +94,10 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		mouse.delta.z = 0.0;
 
 		// var distance = arrayLength(uniforms.camera, camera.position);
-		uniforms.camera = mixArray(uniforms.camera, camera.position, 0.1);
-		uniforms.target = mixArray(uniforms.target, camera.target, 0.1);
-		uniforms.ray = mixArray(uniforms.ray, camera.ray, 0.1);
+		var damping = Math.max(0, Math.min(1, deltaTime * 3));
+		uniforms.camera = mixArray(uniforms.camera, camera.position, damping);
+		uniforms.target = mixArray(uniforms.target, camera.target, damping);
+		uniforms.ray = mixArray(uniforms.ray, camera.ray, damping);
 		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
@@ -159,8 +160,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 			currentFrame = (currentFrame + 1) % count;
 
-			uniforms.time += deltaTime;
-			uniforms.tick++;
 		}
 		
 		// prepare render
@@ -191,6 +190,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		// post process
 		draw(materials['screen'], quad, gl.TRIANGLES);
+
+		uniforms.time = elapsed;
+		uniforms.tick++;
 		
 		// loop
 		requestAnimationFrame(render);
@@ -218,7 +220,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		twgl.resizeCanvasToDisplaySize(gl.canvas);
 		twgl.resizeFramebufferInfo(gl, scene);
 		uniforms.resolution = [gl.canvas.width, gl.canvas.height];
-		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
+		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.001, 100.0);
 	}
 
 	function loadMaterials()
@@ -228,26 +230,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 				[shaders[materialMap[key][0]], shaders[materialMap[key][1]]]);
 			if (program !== null) materials[key] = program;
 		});
-	}
-
-	function mix(a, b, t)
-	{
-		return a + (b - a) * t;
-	}
-
-	function mixArray(arrayA, arrayB, t)
-	{
-		var a = [];
-		for (var i = 0; i < arrayA.length; ++i) a[i] = mix(arrayA[i], arrayB[i], t);
-		return a;
-	}
-
-	function arrayLength(arrayA, arrayB)
-	{
-		var x = arrayB[0] - arrayA[0];
-		var y = arrayB[1] - arrayA[1];
-		var z = arrayB[2] - arrayA[2];
-		return Math.sqrt(x*x + y*y + z*z);
 	}
 
 	// shader hot-reload
