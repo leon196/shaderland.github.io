@@ -77,7 +77,7 @@ float kif(vec3 p)
         shape = length(p)-0.2*a;
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.2;
+        a /= 1.8;
     }
     return scene;
 }
