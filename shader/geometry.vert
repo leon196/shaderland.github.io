@@ -45,18 +45,21 @@ void main ()
 {
 	uv = texcoord*2.-1.;
 	vec4 pos = position;
-	float size = 1./100.;
-	vec2 p = hash21(quantity.y);
+	float size = 1./400.;
+	float id = position.y;
+	vec2 p = hash21(id);
 	p = normalize(p) * pow(length(p), 0.5);
 	vec4 ray = texture2D(frame, p);
 	pos.xyz = ray.xyz;
 	// p.z = ray.r - 2.;
 	// p.xy = p.xy * 2. - 1.;
-	vec3 z = normalize(camera - pos.xyz);
-	vec3 x = normalize(cross(z, vec3(0,1,0)));
-	vec3 y = normalize(cross(z, x));
-	pos.xyz += (x * uv.x - y * uv.y) * size;
+	// vec3 z = normalize(camera - pos.xyz);
+	// vec3 x = normalize(cross(z, vec3(0,1,0)));
+	// vec3 y = normalize(cross(z, x));
+	// pos.xyz += (x * uv.x - y * uv.y) * ray.w * size;
 	gl_Position = viewProjection * pos;
-	color = vec4(ray.w*(0.8+.2*hash11(quantity.y)));
+	// gl_Position.xy += vec2(uv.x, -uv.y) * 0.01;
+	gl_PointSize = 2.0;
+	color = vec4(ray.w);//*(0.8+.2*hash11(quantity.y)));
 	uv = texcoord;
 }

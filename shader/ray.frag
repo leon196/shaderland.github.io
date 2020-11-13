@@ -1,10 +1,14 @@
 precision mediump float;
 
 uniform sampler2D frame;
+uniform vec3 camera;
 uniform vec2 resolution;
-uniform float time, tick, seed;
+uniform float time, tick, seed, count, currentFrame;
 
 varying vec2 texcoord;
+
+#define PI 3.1415
+#define TAU 6.283
 
 // Dave Hoskins
 // https://www.shadertoy.com/view/4djSRW
@@ -43,15 +47,15 @@ float kif(vec3 p)
     float scene = 1.0;
     float r = 0.5;
     float a = 1.0;
-    float t = time/10.;
-    const int count = 4;
+    float t = 15.4;
+    const int count = 16;
     for (int index = 0; index < count; ++index)
     {
-        p = abs(p)-r*a;
+        p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(t/a);
         scene = min(scene, length(p)-0.5*a);
-        a /= 1.8;
+        a /= 1.3;
     }
     return scene;
 }
@@ -59,8 +63,9 @@ float kif(vec3 p)
 float map(vec3 p)
 {
     float scene = 1.0;
-    p = repeat(p,2.);
-    scene = box(p, vec3(0.5));
+    // p = repeat(p,2.);
+    // scene = box(p, vec3(0.5));
+    scene = kif(p);
     return scene;
 }
 
@@ -68,12 +73,24 @@ void main()
 {
     vec3 color = vec3(0);
     vec2 uv = (texcoord*2.-1.);
-    // vec3 eye = vec3(1,1.,-1);
-    float t = time;
-    float radius = 3.;
-    // float radius = 3.+sin(t);
-    // eye.xz *= rot(sin(t)*.1);
-    vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
+    // vec3 eye = vec3(1,1.,-1.5);
+    vec3 eye = camera;
+    float t = (currentFrame / count) * TAU;// + seed;
+    // float radius = 3.;
+    // float radius = 8.;
+    
+    vec3 z = normalize(eye - vec3(0));
+    vec3 x = normalize(cross(z,vec3(0,1,0)));
+    vec3 y = normalize(cross(z,x));
+    float radius = 1.;
+
+    eye += (x * cos(t) + y * sin(t))*radius;
+    // eye.xz *= rot(t * 0.1);
+    // eye.yz *= rot(t * 0.1);
+    // eye.yx *= rot(t * 0.1);
+    // float angle = t;
+    // vec2 offset = vec2(cos(angle), sin(angle))/100.;
+    // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
     vec3 ray = look(eye, vec3(0), uv);
     float total = 0.0;
     float shade = 0.0;
@@ -88,5 +105,5 @@ void main()
         }
         total += dist;
     }
-    gl_FragColor = vec4(eye + ray * total, pow(shade, 0.5));
+    gl_FragColor = vec4(eye + ray * total, shade);
 }
