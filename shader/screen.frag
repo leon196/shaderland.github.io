@@ -12,9 +12,9 @@ void main() {
 	// float lod = 50.;
 	vec4 color = texture2D(scene, texcoord);
 
-    // vec2 p = (vec2(texcoord.x, 1.-texcoord.y))*vec2(resolution.x/resolution.y, 1)*4.;
-	// color = mix(color, fract(abs(texture2D(frameColor, p-vec2(1,0)))), step(p.x-1., 1.) * step(p.y, 1.));
-	// color = mix(color, fract(abs(texture2D(framePosition, p))), step(p.x, 1.) * step(p.y, 1.));
+    vec2 p = texcoord*vec2(resolution.x/resolution.y, 1)*4.;
+	color = mix(color, fract(abs(texture2D(frameColor, p-vec2(1,0)))), step(p.x-1., 1.) * step(p.y, 1.));
+	color = mix(color, fract(abs(texture2D(framePosition, p))), step(p.x, 1.) * step(p.y, 1.));
 
 	gl_FragColor = color;
 	// gl_FragColor = mix(color, blur, smoothstep(0., 1.,length(p)));

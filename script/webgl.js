@@ -10,15 +10,14 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	gl.getExtension('OES_texture_float');
-	const v3 = twgl.v3;
 	const m4 = twgl.m4;
 
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 128;
-	const height = 128;
-	const count = 20;
+	const width = 32;
+	const height = 32;
+	const count = 1;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
@@ -27,14 +26,16 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	{
 		frames.position.push(twgl.createFramebufferInfo(gl, attachments, width, height));
 		frames.color.push(twgl.createFramebufferInfo(gl, attachments, width, height));
-		// frames.normal.push(twgl.createFramebufferInfo(gl, attachments, width, height));
+		frames.normal.push(twgl.createFramebufferInfo(gl, attachments, width, height));
 	}
 	
 	// point cloud
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width * height));
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.quad, width * height));
-	const clones = twgl.createBufferInfoFromArrays(gl, geometry.points(width * height));
+	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.points(width * height));
 	var geometries = [];
+	var attributes = null;
+	var currentGeometry = 0;
 	
 	// post process
 	const scene = twgl.createFramebufferInfo(gl);
@@ -62,6 +63,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		frameResolution: [width, height],
 		seed: Math.random()*1000,
 		camera: [0,0,0],
+		target: [0,0,0],
+		ray: [0,0,0],
 	};
 
 	loadMaterials();
@@ -73,32 +76,19 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		var deltaTime = elapsed - uniforms.time;
 		// uniforms.time = elapsed;
 
-		// input
 		mouse.update();
+		camera.update();
 
-		// camera
-		// var radius = 3.+mouse.drag.z;
-		// var height = -2-mouse.drag.y / 100.;
-		// var angle = + 3.14 / 2 - mouse.drag.x / 100;
-		// var position = [Math.cos(angle) * radius, height, Math.sin(angle) * radius];
-
-		var m = m4.identity();
-		m = m4.axisRotate(m, [0, 1, 0], mouse.drag.x / 1000);
-		m = m4.axisRotate(m, [1,0,0], mouse.drag.y/1000);
-		m = m4.translate(m, [0, 0, 0.1+Math.abs(2+mouse.drag.z)]);
-		var position = m4.getTranslation(m);
-		// console.log(position);
-		var distance = arrayLength(uniforms.camera, position);
-		uniforms.camera = mixArray(uniforms.camera, position, 0.5);
-		uniforms.target = [0,0,0];
+		// var distance = arrayLength(uniforms.camera, camera.position);
+		uniforms.camera = mixArray(uniforms.camera, camera.position, 0.1);
+		uniforms.target = mixArray(uniforms.target, camera.target, 0.1);
+		uniforms.ray = mixArray(uniforms.ray, camera.ray, 0.1);
 		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
-		
-
 		// if (compute)
 		// {
-		if (keyboard.Space.down)
+		// if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
 			// position
@@ -111,16 +101,49 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			setFramebuffer(frames.color[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
+			// normal
+			uniforms.mode = 2;
+			setFramebuffer(frames.normal[currentFrame])
+			draw(materials['ray'], quad, gl.TRIANGLES);
+
 			var positions = new Float32Array(width * height * 4);
 			var colors = new Float32Array(width * height * 4);
+			var normals = new Float32Array(width * height * 4);
 			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position[currentFrame].framebuffer);
 			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, positions);
 			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color[currentFrame].framebuffer);
 			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, colors);
-			geometries.push(twgl.createBufferInfoFromArrays(gl, {
-				position: { data: positions, numComponents: 4},
-				color: { data: colors, numComponents: 4},
-			}));
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.normal[currentFrame].framebuffer);
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, normals);
+			// geometries.push(twgl.createBufferInfoFromArrays(gl, {
+			// 	position: { data: positions, numComponents: 4},
+			// 	color: { data: colors, numComponents: 4},
+			// }));
+			if (attributes === null)
+			{
+				attributes = geometry.pointcloud(positions, colors, normals);
+				geometries = [];
+			}
+			else if (attributes.position.length/3 + width*height > 256*256)
+			{
+				attributes = geometry.pointcloud(positions, colors, normals);
+				geometries.push({});
+				if (currentGeometry == 10)
+				{
+					geometries.shift();
+				}
+				else
+				{
+					++currentGeometry;
+				}
+				// console.log(256*256*currentGeometry);				
+			}
+			else
+			{
+				attributes = geometry.mergePointcloud(attributes, positions, colors, normals);
+			}
+			geometries[currentGeometry] = twgl.createBufferInfoFromArrays(gl, attributes);
+			// geometries.push(twgl.createBufferInfoFromArrays(gl, geometry.pointcloud(positions, colors, normals)));
 
 			currentFrame = (currentFrame + 1) % count;
 			keyboard.Space.down = false;
@@ -162,14 +185,14 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// }
 		for (var index = 0; index < geometries.length; ++index)
 		{
-			draw(materials['point'], geometries[index], gl.POINTS);
+			draw(materials['point'], geometries[index], gl.TRIANGLES);
 		}
 		
 		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
 		// var animatedFrame = Math.floor((elapsed) % count);
 		var previousFrame = (currentFrame + count - 1) % count;
-		uniforms.framePosition = frames.position[previousFrame].attachments[0];
-		uniforms.frameColor = frames.color[previousFrame].attachments[0];
+		uniforms.framePosition = frames.position[currentFrame].attachments[0];
+		uniforms.frameColor = frames.color[currentFrame].attachments[0];
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;
 
