@@ -17,6 +17,9 @@ keyboard.W = new Key(87)
 keyboard.A = new Key(65)
 keyboard.S = new Key(83)
 keyboard.D = new Key(68)
+keyboard.R = new Key(82)
+keyboard.Q = new Key(81)
+keyboard.E = new Key(69)
 
 keyboard.onKeyDown = function (event) {
     for (var propertyName in keyboard) {

@@ -15,8 +15,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 32;
-	const height = 32;
+	const width = 64;
+	const height = 64;
 	const count = 1;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
@@ -36,6 +36,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var geometries = [];
 	var attributes = null;
 	var currentGeometry = 0;
+	const MAXIMUM_MESHES = 20;
 	
 	// post process
 	const scene = twgl.createFramebufferInfo(gl);
@@ -43,7 +44,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 	// camera
 	var fieldOfView = 60;
-	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.01, 100.0);
+	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.001, 100.0);
 
 	// materials
 	var materials = {};
@@ -62,12 +63,12 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		count: count,
 		frameResolution: [width, height],
 		seed: Math.random()*1000,
-		camera: [0,0,0],
-		target: [0,0,0],
-		ray: [0,0,0],
+		camera: camera.position,
+		target: camera.target,
+		ray: camera.ray,
 	};
 
-	var pointSize = 0.0001;
+	var pointSize = 0.001;
 
 	loadMaterials();
 
@@ -80,6 +81,13 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		mouse.update();
 		camera.update();
+
+		var updateSeed = keyboard.R.down;
+		if (updateSeed)
+		{
+			uniforms.seed = Math.random() * 1000;
+			keyboard.R.down = false;
+		}
 
 		var updatePointSize = mouse.delta.z != 0;
 		pointSize = Math.max(0.0001, Math.min(0.1, pointSize - mouse.delta.z * 0.0002));
@@ -127,7 +135,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, normals);
 			
 			// reset geometry
-			if (attributes === null || updatePointSize)
+			if (attributes === null || updatePointSize || updateSeed)
 			{
 				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
 				geometries = [];
@@ -138,7 +146,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			{
 				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
 				geometries.push({});
-				if (currentGeometry == 10) geometries.shift();
+				if (currentGeometry == MAXIMUM_MESHES) geometries.shift();
 				else ++currentGeometry;
 			}
 			// merge points in geometry

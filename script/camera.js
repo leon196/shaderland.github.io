@@ -27,6 +27,8 @@ camera.update = function()
     if (keyboard.S.down) camera.position = v3.add(camera.position, v3.mulScalar(camera.ray, -speed));
     if (keyboard.A.down) camera.position = v3.add(camera.position, v3.mulScalar(camera.right, +speed));
     if (keyboard.D.down) camera.position = v3.add(camera.position, v3.mulScalar(camera.right, -speed));
+    if (keyboard.Q.down) camera.position = v3.add(camera.position, v3.mulScalar([0,1,0], -speed));
+    if (keyboard.E.down) camera.position = v3.add(camera.position, v3.mulScalar([0,1,0], +speed));
     camera.target = v3.add(camera.position, camera.ray);
     // console.log(camera.target)
 }
