@@ -16,9 +16,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 256;
-	const height = 256;
-	const count = 10;
+	const width = 64;
+	const height = 64;
+	const count = 20;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
@@ -27,7 +27,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	{
 		frames.position.push(twgl.createFramebufferInfo(gl, attachments, width, height));
 		frames.color.push(twgl.createFramebufferInfo(gl, attachments, width, height));
-		frames.normal.push(twgl.createFramebufferInfo(gl, attachments, width, height));
+		// frames.normal.push(twgl.createFramebufferInfo(gl, attachments, width, height));
 	}
 	
 	// point cloud
@@ -76,18 +76,21 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		// camera
 		var radius = 3.+mouse.drag.z;
-		var height = 0.1-mouse.drag.y / 100.;
-		var angle = - 3.14 / 2 - mouse.drag.x / 100;
+		var height = -2-mouse.drag.y / 100.;
+		var angle = + 3.14 / 2 - mouse.drag.x / 100;
 		var position = [Math.cos(angle) * radius, height, Math.sin(angle) * radius];
+		var distance = arrayLength(uniforms.camera, position);
 		uniforms.camera = mixArray(uniforms.camera, position, deltaTime * 4);
 		uniforms.target = [0,0,0];
 		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
+		
 
 		// if (compute)
 		// {
-		if (keyboard.Space.down)
+		// if (keyboard.Space.down)
+		if (distance > 0.1)
 		{
 			// position
 			uniforms.mode = 0;
@@ -100,7 +103,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
 			currentFrame = (currentFrame + 1) % count;
-			keyboard.Space.down = false;
+			// keyboard.Space.down = false;
 		}
 		// 	// until
 		// 	if (++currentFrame == count)
@@ -118,13 +121,14 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// }
 		
 		// prepare render
-		gl.bindFramebuffer(gl.FRAMEBUFFER, scene.framebuffer);
-		gl.clearColor(0,0,0,1);
-		gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+		// gl.bindFramebuffer(gl.FRAMEBUFFER, scene.framebuffer);
+		// gl.clearColor(0,0,0,1);
+		// gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 		gl.cullFace(gl.BACK);
-		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		// gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+		setFramebuffer(scene);
 		
 		// render scene
 		for (var index = 0; index < count; ++index)
@@ -135,9 +139,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		}
 
 		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
-		var animatedFrame = Math.floor((elapsed) % count);
-		uniforms.framePosition = frames.position[animatedFrame].attachments[0];
-		uniforms.frameColor = frames.color[animatedFrame].attachments[0];
+		// var animatedFrame = Math.floor((elapsed) % count);
+		uniforms.framePosition = frames.position[0].attachments[0];
+		uniforms.frameColor = frames.color[0].attachments[0];
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;
 
@@ -175,6 +179,19 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.viewport(0, 0, frame.width, frame.height);
 	}
 
+	function setAtlas(frame)
+	{
+		gl.bindFramebuffer(gl.FRAMEBUFFER, frame.framebuffer);
+		gl.clearColor(0, 0, 0, 1);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		var grid = [4,4];
+		var x = currentFrame % grid[0];
+		var y = Math.floor(currentFrame / grid[0]);
+		var w = frame.width/grid[0];
+		var h = frame.height/grid[1];
+		gl.viewport(x*w, y*h, w, h);
+	}
+
 	function onWindowResize()
 	{
 		twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -202,6 +219,14 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		var a = [];
 		for (var i = 0; i < arrayA.length; ++i) a[i] = mix(arrayA[i], arrayB[i], t);
 		return a;
+	}
+
+	function arrayLength(arrayA, arrayB)
+	{
+		var x = arrayB[0] - arrayA[0];
+		var y = arrayB[1] - arrayA[1];
+		var z = arrayB[2] - arrayA[2];
+		return Math.sqrt(x*x + y*y + z*z);
 	}
 
 	// shader hot-reload

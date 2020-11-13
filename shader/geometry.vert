@@ -72,7 +72,7 @@ void main ()
 	// pos.xyz += (x * uv.x - y * uv.y) * size;
 	gl_Position = viewProjection * pos;
 	// gl_Position.xy += vec2(uv.x, -uv.y) * 0.01;
-	gl_PointSize = 2.;
+	gl_PointSize = 4.;
 	color = texture2D(frameColor, p);//*(0.8+.2*hash11(quantity.y)));
 	// color = vec4(getNormal(p), 1);
 	// uv = texcoord;

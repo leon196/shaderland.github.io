@@ -2,7 +2,7 @@ precision mediump float;
 
 uniform sampler2D framePosition, frameColor;
 uniform vec3 camera;
-uniform vec2 resolution;
+uniform vec2 resolution, frameResolution;
 uniform float time, tick, seed, count, currentFrame;
 uniform float mode;
 
@@ -41,7 +41,7 @@ vec3 look(vec3 from, vec3 to, vec2 uv)
     vec3 z = normalize(to-from);
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    return normalize(z + x * uv.x + y * uv.y);
+    return normalize(z * 2. + x * uv.x + y * uv.y);
 }
 
 mat2 rot(float a)
@@ -87,6 +87,7 @@ void main()
 {
     vec3 color = vec3(0);
     vec2 uv = (texcoord*2.-1.);
+    uv += (hash21(hash12(texcoord*frameResolution))*2.-1.)*1./frameResolution;
     // vec3 eye = vec3(1,1.,-1.5);
     vec3 eye = camera;
     float t = (currentFrame / count) * TAU;// + seed;
@@ -96,7 +97,7 @@ void main()
     vec3 z = normalize(eye - vec3(0));
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    float radius = .5;
+    float radius = 1.;
 
     vec3 target = vec3(0);
     target += (x * cos(t) + y * sin(t))*radius;
