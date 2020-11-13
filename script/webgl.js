@@ -16,9 +16,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 64;
-	const height = 64;
-	const count = 20;
+	const width = 256;
+	const height = 256;
+	const count = 10;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
@@ -69,18 +69,25 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// time
 		elapsed /= 1000;
 		var deltaTime = elapsed - uniforms.time;
-		uniforms.time = elapsed;
+		// uniforms.time = elapsed;
 
 		// input
 		mouse.update();
 
 		// camera
-		var radius = 3.+mouse.drag.z;
-		var height = -2-mouse.drag.y / 100.;
-		var angle = + 3.14 / 2 - mouse.drag.x / 100;
-		var position = [Math.cos(angle) * radius, height, Math.sin(angle) * radius];
+		// var radius = 3.+mouse.drag.z;
+		// var height = -2-mouse.drag.y / 100.;
+		// var angle = + 3.14 / 2 - mouse.drag.x / 100;
+		// var position = [Math.cos(angle) * radius, height, Math.sin(angle) * radius];
+
+		var m = m4.identity();
+		m = m4.axisRotate(m, [0, 1, 0], mouse.drag.x / 1000);
+		m = m4.axisRotate(m, [1,0,0], mouse.drag.y/1000);
+		m = m4.translate(m, [0, 0, 0.1+Math.abs(2+mouse.drag.z)]);
+		var position = m4.getTranslation(m);
+		// console.log(position);
 		var distance = arrayLength(uniforms.camera, position);
-		uniforms.camera = mixArray(uniforms.camera, position, deltaTime * 4);
+		uniforms.camera = mixArray(uniforms.camera, position, 0.5);
 		uniforms.target = [0,0,0];
 		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
@@ -90,7 +97,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// if (compute)
 		// {
 		// if (keyboard.Space.down)
-		if (distance > 0.1)
+		// if (distance > 0.1)
 		{
 			// position
 			uniforms.mode = 0;
@@ -103,7 +110,10 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
 			currentFrame = (currentFrame + 1) % count;
-			// keyboard.Space.down = false;
+			keyboard.Space.down = false;
+
+			uniforms.time += deltaTime;
+			uniforms.tick++;
 		}
 		// 	// until
 		// 	if (++currentFrame == count)
@@ -140,8 +150,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
 		// var animatedFrame = Math.floor((elapsed) % count);
-		uniforms.framePosition = frames.position[0].attachments[0];
-		uniforms.frameColor = frames.color[0].attachments[0];
+		var previousFrame = (currentFrame + count - 1) % count;
+		uniforms.framePosition = frames.position[previousFrame].attachments[0];
+		uniforms.frameColor = frames.color[previousFrame].attachments[0];
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;
 
@@ -156,7 +167,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// post process
 		draw(materials['screen'], quad, gl.TRIANGLES);
 		
-		uniforms.tick++;
 		
 		// loop
 		requestAnimationFrame(render);

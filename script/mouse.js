@@ -34,7 +34,7 @@ mouse.update = function(elapsed)
       mouse.drag.y += mouse.delta.y;
     }
     mouse.drag.z += mouse.delta.z;
-    mouse.delta.z *= 0.5;
+    mouse.delta.z = 0;
   }
   else
   {
