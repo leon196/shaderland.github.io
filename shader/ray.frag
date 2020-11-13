@@ -65,19 +65,19 @@ float kif(vec3 p)
 {
     float scene = 1.0;
     float shape = 1.0;
-    float r = .5;
+    float r = .2;
     float a = 1.0;
     float t =  seed+tick*.001;
-    const int count = 16;
+    const int count = 12;
     for (int index = 0; index < count; ++index)
     {
         p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(sin(t/a));
-        shape = length(p)-0.2*a;
+        shape = length(p)-0.1*a;
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.8;
+        a /= 1.1;
     }
     return scene;
 }
@@ -97,7 +97,10 @@ float map(vec3 p)
     // p = repeat(p,2.);
     // scene = box(p, vec3(0.5));
     scene = kif(p);
-    rough = 1.0;
+    shape = box(p, vec3(0.01,1.,0.01));
+    material = shape < scene ? 0.0 : material;
+    rough = shape < scene ? 0.1 : 0.5;
+    scene = min(scene, shape);
     return scene;
 }
 
@@ -114,7 +117,7 @@ void main()
     uv += (hash21(hash12(texcoord*frameResolution))*2.-1.)*1./frameResolution;
     // vec3 eye = vec3(1,1.,-1.5);
     vec3 eye = camera;
-    eye.xz *= rot(3.14/2.);
+    eye.xz *= rot(3.14/4.);
     float t = (currentFrame / count) * TAU;// + seed;
     // float radius = 3.;
     // float radius = 8.;
@@ -169,14 +172,15 @@ void main()
             {
                 vec3 normal = getNormal(pos);
                 float light = pow(dot(normal, -ray)*0.5+0.5, 2.);
-                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*material*0.1);
+                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*material*0.2);
                 // palette *= 1.-mod(material, 2.);
                 color += palette * float(bounces)/float(rebounces);
-                gl_FragColor = vec4(clamp(color, 0., 1.), 1);
+                // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
                 if (bounces == rebounces)
                 {
-                    color *= shade;
+                    color = palette;
                 }
+                gl_FragColor = vec4(clamp(color * shade, 0., 1.), 1);
                 if (--bounces == 0)
                 {
                     break;

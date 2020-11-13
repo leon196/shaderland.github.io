@@ -16,8 +16,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 256;
-	const height = 256;
+	const width = 128;
+	const height = 128;
 	const count = 10;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
