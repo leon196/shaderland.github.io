@@ -1,6 +1,6 @@
 precision mediump float;
 
-uniform sampler2D framePosition, frameColor, scene;
+uniform sampler2D framePosition, frameColor, frameNormal, scene;
 uniform vec2 resolution;
 uniform float time;
 
@@ -13,6 +13,7 @@ void main() {
 	vec4 color = texture2D(scene, texcoord);
 
     vec2 p = texcoord*vec2(resolution.x/resolution.y, 1)*4.;
+	color = mix(color, fract(abs(texture2D(frameNormal, p-vec2(2,0)))), step(p.x-2., 1.) * step(p.y, 1.));
 	color = mix(color, fract(abs(texture2D(frameColor, p-vec2(1,0)))), step(p.x-1., 1.) * step(p.y, 1.));
 	color = mix(color, fract(abs(texture2D(framePosition, p))), step(p.x, 1.) * step(p.y, 1.));
 

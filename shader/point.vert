@@ -17,6 +17,6 @@ float random (in vec2 st) { return fract(sin(dot(st.xy,vec2(12.9898,78.233)))*43
 void main ()
 {
 	gl_Position = viewProjection * position;
-	gl_PointSize = 1.;
+	// gl_PointSize = 1.;
 	vColor = color;
 }

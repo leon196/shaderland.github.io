@@ -37,26 +37,22 @@ mouse.ontouchmove = function(event)
 
 mouse.update = function(elapsed)
 {
-  // if (!mouse.touch)
-  // {
-    if (!mouse.firstFrame)
-    {
-      mouse.delta.x = mouse.last.x - mouse.x;
-      mouse.delta.y = mouse.last.y - mouse.y;
-      if (mouse.clic) {
-        mouse.drag.x += mouse.delta.x;
-        mouse.drag.y += mouse.delta.y;
-      }
-      mouse.drag.z += mouse.delta.z;
-      mouse.delta.z = 0;
+  if (!mouse.firstFrame)
+  {
+    mouse.delta.x = mouse.last.x - mouse.x;
+    mouse.delta.y = mouse.last.y - mouse.y;
+    if (mouse.clic) {
+      mouse.drag.x += mouse.delta.x;
+      mouse.drag.y += mouse.delta.y;
     }
-    else
-    {
-      mouse.firstFrame = false;
-    }
-    mouse.last.x = mouse.x;
-    mouse.last.y = mouse.y;
-  // }
+    mouse.drag.z += mouse.delta.z;
+  }
+  else
+  {
+    mouse.firstFrame = false;
+  }
+  mouse.last.x = mouse.x;
+  mouse.last.y = mouse.y;
 }
 
 mouse.onmousedown = function(event)
@@ -94,11 +90,12 @@ mouse.onmouseout = function(event)
 
 mouse.onwheel = function(event)
 {
-  // console.log(event.deltaY);
+  event.stopPropagation();
+  event.preventDefault();
   if (event.deltaY > 0) {
-    mouse.delta.z += 0.1;
+    mouse.delta.z += 1;
   } else {
-    mouse.delta.z -= 0.1;
+    mouse.delta.z -= 1;
   }
 };
 

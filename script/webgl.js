@@ -67,6 +67,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		ray: [0,0,0],
 	};
 
+	var pointSize = 0.0001;
+
 	loadMaterials();
 
 	function render(elapsed)
@@ -79,6 +81,10 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		mouse.update();
 		camera.update();
 
+		var updatePointSize = mouse.delta.z != 0;
+		pointSize = Math.max(0.0001, Math.min(0.1, pointSize - mouse.delta.z * 0.0002));
+		mouse.delta.z = 0.0;
+
 		// var distance = arrayLength(uniforms.camera, camera.position);
 		uniforms.camera = mixArray(uniforms.camera, camera.position, 0.1);
 		uniforms.target = mixArray(uniforms.target, camera.target, 0.1);
@@ -87,112 +93,83 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
 		// if (compute)
-		// {
 		// if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
-			// position
+			// draw position
 			uniforms.mode = 0;
 			setFramebuffer(frames.position[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
-			// color
+			// read position
+			var positions = new Float32Array(width * height * 4);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position[currentFrame].framebuffer);
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, positions);
+
+			// draw color
 			uniforms.mode = 1;
 			setFramebuffer(frames.color[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
-			// normal
+			// read color
+			var colors = new Float32Array(width * height * 4);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color[currentFrame].framebuffer);
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, colors);
+
+			// draw normal
 			uniforms.mode = 2;
 			setFramebuffer(frames.normal[currentFrame])
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
-			var positions = new Float32Array(width * height * 4);
-			var colors = new Float32Array(width * height * 4);
+			// read normal
 			var normals = new Float32Array(width * height * 4);
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position[currentFrame].framebuffer);
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, positions);
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color[currentFrame].framebuffer);
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, colors);
 			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.normal[currentFrame].framebuffer);
 			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, normals);
-			// geometries.push(twgl.createBufferInfoFromArrays(gl, {
-			// 	position: { data: positions, numComponents: 4},
-			// 	color: { data: colors, numComponents: 4},
-			// }));
-			if (attributes === null)
+			
+			// reset geometry
+			if (attributes === null || updatePointSize)
 			{
-				attributes = geometry.pointcloud(positions, colors, normals);
+				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
 				geometries = [];
+				currentGeometry = 0;
 			}
+			// create new geometry for 256*256 vertices limit
 			else if (attributes.position.length/3 + width*height > 256*256)
 			{
-				attributes = geometry.pointcloud(positions, colors, normals);
+				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
 				geometries.push({});
-				if (currentGeometry == 10)
-				{
-					geometries.shift();
-				}
-				else
-				{
-					++currentGeometry;
-				}
-				// console.log(256*256*currentGeometry);				
+				if (currentGeometry == 10) geometries.shift();
+				else ++currentGeometry;
 			}
+			// merge points in geometry
 			else
 			{
-				attributes = geometry.mergePointcloud(attributes, positions, colors, normals);
+				attributes = geometry.mergePointcloud(attributes, positions, colors, normals, pointSize);
 			}
+
 			geometries[currentGeometry] = twgl.createBufferInfoFromArrays(gl, attributes);
-			// geometries.push(twgl.createBufferInfoFromArrays(gl, geometry.pointcloud(positions, colors, normals)));
 
 			currentFrame = (currentFrame + 1) % count;
-			keyboard.Space.down = false;
 
 			uniforms.time += deltaTime;
 			uniforms.tick++;
 		}
-		// 	// until
-		// 	if (++currentFrame == count)
-		// 	{
-		// 		compute = false;
-		// 	}
-		// }
-		// else
-		// {
-		// 	if (keyboard.Space.down)
-		// 	{
-		// 		compute = true;
-		// 		currentFrame = 0;
-		// 	}
-		// }
 		
 		// prepare render
-		// gl.bindFramebuffer(gl.FRAMEBUFFER, scene.framebuffer);
-		// gl.clearColor(0,0,0,1);
-		// gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+		setFramebuffer(scene);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 		gl.cullFace(gl.BACK);
-		// gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-		setFramebuffer(scene);
 		
 		// render scene
-		// for (var index = 0; index < count; ++index)
-		// {
-		// 	uniforms.framePosition = frames.position[index].attachments[0];
-		// 	uniforms.frameColor = frames.color[index].attachments[0];
-		// 	draw(materials['geometry'], clones, gl.POINTS);
-		// }
 		for (var index = 0; index < geometries.length; ++index)
 		{
 			draw(materials['point'], geometries[index], gl.TRIANGLES);
 		}
 		
-		// var animatedFrame = Math.floor((Math.sin(elapsed * 4.) * 0.5 + 0.5) * count);
-		// var animatedFrame = Math.floor((elapsed) % count);
-		var previousFrame = (currentFrame + count - 1) % count;
 		uniforms.framePosition = frames.position[currentFrame].attachments[0];
 		uniforms.frameColor = frames.color[currentFrame].attachments[0];
+		uniforms.frameNormal = frames.normal[currentFrame].attachments[0];
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;
 
@@ -206,7 +183,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 		// post process
 		draw(materials['screen'], quad, gl.TRIANGLES);
-		
 		
 		// loop
 		requestAnimationFrame(render);
@@ -227,19 +203,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.clearColor(0, 0, 0, 1);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		gl.viewport(0, 0, frame.width, frame.height);
-	}
-
-	function setAtlas(frame)
-	{
-		gl.bindFramebuffer(gl.FRAMEBUFFER, frame.framebuffer);
-		gl.clearColor(0, 0, 0, 1);
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		var grid = [4,4];
-		var x = currentFrame % grid[0];
-		var y = Math.floor(currentFrame / grid[0]);
-		var w = frame.width/grid[0];
-		var h = frame.height/grid[1];
-		gl.viewport(x*w, y*h, w, h);
 	}
 
 	function onWindowResize()
