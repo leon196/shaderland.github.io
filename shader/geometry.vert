@@ -2,9 +2,9 @@ precision highp float;
 
 attribute vec4 position;
 attribute vec3 normal, quantity;
-attribute vec2 texcoord;
+attribute vec2 texcoord, frameResolution;
 
-uniform sampler2D frame;
+uniform sampler2D framePosition, frameColor;
 uniform vec3 camera;
 uniform mat4 view, viewProjection;
 uniform vec2 resolution;
@@ -41,25 +41,39 @@ vec3 displace(float offset)
 	return p;
 }
 
+float neighborDistance(vec3 pos, vec2 p)
+{
+	vec3 e = vec3(1./frameResolution, 0);
+	float dist = 0.;
+	dist += length(texture2D(framePosition, p+e.xz).xyz-pos);
+	dist += length(texture2D(framePosition, p-e.xz).xyz-pos);
+	dist += length(texture2D(framePosition, p+e.zy).xyz-pos);
+	dist += length(texture2D(framePosition, p-e.zy).xyz-pos);
+	return dist;
+}
+
 void main ()
 {
-	uv = texcoord*2.-1.;
-	vec4 pos = position;
-	float size = 1./400.;
+	// uv = texcoord*2.-1.;
+	// uv = position.xy;
+	// vec4 pos = position;
+	// float size = 1./400.;
 	float id = position.y;
 	vec2 p = hash21(id);
-	p = normalize(p) * pow(length(p), 0.5);
-	vec4 ray = texture2D(frame, p);
-	pos.xyz = ray.xyz;
+	// p = normalize(p) * pow(length(p), 0.5);
+	// vec4 ray = texture2D(framePosition, hash21(position.y));
+	// pos.xyz = ray.xyz;
 	// p.z = ray.r - 2.;
 	// p.xy = p.xy * 2. - 1.;
+	vec4 pos = texture2D(framePosition, p);
 	// vec3 z = normalize(camera - pos.xyz);
 	// vec3 x = normalize(cross(z, vec3(0,1,0)));
 	// vec3 y = normalize(cross(z, x));
-	// pos.xyz += (x * uv.x - y * uv.y) * ray.w * size;
+	// pos.xyz += (x * uv.x - y * uv.y) * size;
 	gl_Position = viewProjection * pos;
 	// gl_Position.xy += vec2(uv.x, -uv.y) * 0.01;
-	gl_PointSize = 2.0;
-	color = vec4(ray.w);//*(0.8+.2*hash11(quantity.y)));
-	uv = texcoord;
+	gl_PointSize = 2.;
+	color = texture2D(frameColor, p);//*(0.8+.2*hash11(quantity.y)));
+	// color = vec4(getNormal(p), 1);
+	// uv = texcoord;
 }

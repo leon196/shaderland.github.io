@@ -1,14 +1,18 @@
 precision mediump float;
 
-uniform sampler2D frame;
+uniform sampler2D framePosition, frameColor;
 uniform vec3 camera;
 uniform vec2 resolution;
 uniform float time, tick, seed, count, currentFrame;
+uniform float mode;
 
 varying vec2 texcoord;
 
 #define PI 3.1415
 #define TAU 6.283
+
+const float MODE_POSITION = 0.0;
+const float MODE_COLOR = 1.0;
 
 // Dave Hoskins
 // https://www.shadertoy.com/view/4djSRW
@@ -24,6 +28,10 @@ float box( vec3 p, vec3 b )
 {
   vec3 q = abs(p) - b;
   return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+float smin (float a, float b, float r) {
+    float h = clamp(.5+.5*(b-a)/r,0.,1.);
+    return mix(b,a,h)-r*h*(1.-h);
 }
 
 #define repeat(p,r) (mod(p+r/2.,r)-r/2.)
@@ -45,17 +53,17 @@ mat2 rot(float a)
 float kif(vec3 p)
 {
     float scene = 1.0;
-    float r = 0.5;
+    float r = .5;
     float a = 1.0;
-    float t = 15.4;
+    float t =  5.4;
     const int count = 16;
     for (int index = 0; index < count; ++index)
     {
         p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
-        p.yz *= rot(t/a);
-        scene = min(scene, length(p)-0.5*a);
-        a /= 1.3;
+        p.yz *= rot(sin(t/a)*.5);
+        scene = min(scene, length(p.xz)-0.2*a);
+        a /= 1.1;
     }
     return scene;
 }
@@ -67,6 +75,12 @@ float map(vec3 p)
     // scene = box(p, vec3(0.5));
     scene = kif(p);
     return scene;
+}
+
+vec3 getNormal(vec3 p)
+{
+	vec2 e = vec2(.01, 0.);
+	return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));
 }
 
 void main()
@@ -82,7 +96,7 @@ void main()
     vec3 z = normalize(eye - vec3(0));
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    float radius = 1.;
+    float radius = .5;
 
     eye += (x * cos(t) + y * sin(t))*radius;
     // eye.xz *= rot(t * 0.1);
@@ -94,6 +108,7 @@ void main()
     vec3 ray = look(eye, vec3(0), uv);
     float total = 0.0;
     float shade = 0.0;
+    float dither = hash12(texcoord * resolution);
     const int steps = 30;
     for (int index = 0; index < steps; ++index)
     {
@@ -103,7 +118,23 @@ void main()
             shade = float(steps-index)/float(steps);
             break;
         }
-        total += dist;
+        total += dist * (0.9 + 0.1 * dither);
     }
-    gl_FragColor = vec4(eye + ray * total, shade);
+
+    if (total + 0.001/shade > 10.)
+    {
+        gl_FragColor = vec4(0);
+    }
+    else if (mode == MODE_POSITION)
+    {
+        gl_FragColor = vec4(eye + ray * total, 1);
+    }
+    else// if (mode == MODE_COLOR)
+    {
+        vec3 normal = getNormal(eye + ray * total);
+        vec3 color = vec3(1,0,0) * pow(dot(normal, vec3(0,1,0))*0.5+0.5, 5.);
+        color += vec3(0,0,1) * pow(dot(normal, normalize(vec3(0,1,1)))*0.5+0.5, 0.5);
+        color *= pow(dot(normal, -ray)*0.5+0.5, 2.);
+        gl_FragColor = vec4(color*shade, 1);
+    }
 }
