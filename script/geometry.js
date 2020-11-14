@@ -11,44 +11,15 @@ var geometry = {
         return attributes;
     },
 
-    pointcloud: function(positions, colors, normals, pointSize)
+    pointcloud: function (attributes, positions, colors, normals, pointSize)
     {
-        const v3 = twgl.v3;
-        const stride = 4;
-        var count = positions.length / stride;
-        var attributes = { position: [], color: [], indices: [] };
-        const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0,];
-        const indices = [0, 1, 2, 2, 3, 0];
-        var size = 1;
-        for (var index = 0; index < count; ++index)
-        {
-            var i = index * stride;
-            var pos = [positions[i], positions[i + 1], positions[i + 2]];
-            var z = [normals[i], normals[i + 1], normals[i+2]];
-            var x = v3.normalize(v3.cross(z, [0,1,0]));
-            var y = v3.normalize(v3.cross(x, z));
-            size = pointSize * arrayLength(pos, camera.position);
-            for (var v = 0; v < 4; ++v)
-            {
-                attributes.position.push(pos[0] + (x[0] * position[v * 3] + y[0] * position[v * 3 + 1]) * size);
-                attributes.position.push(pos[1] + (x[1] * position[v * 3] + y[1] * position[v * 3 + 1]) * size);
-                attributes.position.push(pos[2] + (x[2] * position[v * 3] + y[2] * position[v * 3 + 1]) * size);
-                attributes.color.push(colors[i], colors[i+1], colors[i+2], colors[i+3]);
-            }
-            for (var t = 0; t < 6; ++t)
-            {
-                attributes.indices.push(index * 4 + indices[t]);
-            }
-        }
-        return attributes;
-    },
+        var indexStart = 0;
+        if (attributes != null) indexStart = attributes.position.length / 3;
+        else attributes = { position: [], color: [], normal: [], indices: [] };
 
-    mergePointcloud: function (attributes, positions, colors, normals, pointSize)
-    {
         const v3 = twgl.v3;
         const stride = 4;
         var count = positions.length / stride;
-        const indexStart = attributes.position.length / 3;
         var indexTriangle = 0;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0,];
         const indices = [0, 1, 2, 2, 3, 0];
@@ -68,6 +39,7 @@ var geometry = {
                     attributes.position.push(pos[0] + (x[0] * position[v * 3] + y[0] * position[v * 3 + 1]) * size);
                     attributes.position.push(pos[1] + (x[1] * position[v * 3] + y[1] * position[v * 3 + 1]) * size);
                     attributes.position.push(pos[2] + (x[2] * position[v * 3] + y[2] * position[v * 3 + 1]) * size);
+                    attributes.normal.push(normals[i], normals[i + 1], normals[i + 2]);
                     attributes.color.push(colors[i], colors[i+1], colors[i+2], colors[i+3]);
                 }
                 for (var t = 0; t < 6; ++t)

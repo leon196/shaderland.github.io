@@ -62,6 +62,29 @@ mat2 rot(float a)
     return mat2(c,-s,s,c);
 }
 
+// Inigo Quilez
+float hash(float n) { return fract(sin(n) * 1e4); }
+float noise(vec3 x) {
+    const vec3 step = vec3(110, 241, 171);
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+    float n = dot(i, step);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix( hash(n + dot(step, vec3(0, 0, 0))), hash(n + dot(step, vec3(1, 0, 0))), u.x),
+                   mix( hash(n + dot(step, vec3(0, 1, 0))), hash(n + dot(step, vec3(1, 1, 0))), u.x), u.y),
+               mix(mix( hash(n + dot(step, vec3(0, 0, 1))), hash(n + dot(step, vec3(1, 0, 1))), u.x),
+                   mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
+}
+float fbm (vec3 p) {
+  float amplitude = 0.5;
+  float result = 0.0;
+  for (float index = 0.0; index <= 3.0; ++index) {
+    result += abs(sin(noise(p / amplitude) * PI * 8.)) * amplitude;
+    amplitude /= 2.;
+  }
+  return result;
+}
+
 float kif(vec3 p)
 {
     float scene = 1.0;
@@ -129,7 +152,8 @@ float map(vec3 p)
     // p = repeat(p,2.);
     // scene = box(p, vec3(0.5));
     // scene = kif(p);
-    scene = city(p);
+    // scene = city(p);
+    scene = length(p)-1.+0.1*fbm(p*4.);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
     // rough = shape < scene ? 0.1 : 0.5;
@@ -187,7 +211,7 @@ void main()
     // float angle = t;
     // vec2 offset = vec2(cos(angle), sin(angle))/100.;
     // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    float dither = hash12(texcoord * resolution + tick);
+    float dither = hash12(texcoord * resolution);
     vec3 ray = look(eye, at, uv);
     // ray.xz *= rot(3.14/4.);
     vec3 pos = eye;// + ray * dither * 0.1;
@@ -213,18 +237,19 @@ void main()
             }
             else if (mode == MODE_COLOR)
             {
-                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(material*0.05));
+                // vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(material*0.05));
+                shade = float(steps-index)/float(steps);
                 vec3 normal = getNormal(pos);
-                float light = pow(dot(normal, -ray)*0.5+0.5, 2.);
+                float light = pow(dot(normal, -ray)*0.5+0.5, 8.);
+                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*shade*1.+vec3(1,2,3)*total);
                 // palette *= 1.-mod(material, 2.);
-                color += palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
+                color += vec3(1);//palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
                 // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
-                if (bounces == rebounces)
-                {
-                    color = palette;
-                    shade = float(steps-index)/float(steps);
-                }
-                gl_FragColor = vec4(clamp(color * shade * light, 0., 1.), 1);
+                // if (bounces == rebounces)
+                // {
+                //     color = palette;
+                // }
+                gl_FragColor = vec4(clamp(color * shade, 0., 1.), 1);
                 // gl_FragColor = floor(gl_FragColor*lod)/lod;
                 if (--bounces == 0)
                 {
@@ -246,7 +271,7 @@ void main()
             }
 
         }
-        dist *= 0.9 + 0.1 * dither;
+        dist *= 0.2 + 0.1 * dither;
         total += dist;
         pos += ray * dist;
     }

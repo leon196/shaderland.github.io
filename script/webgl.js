@@ -3,6 +3,7 @@
 window.onload = function() {
 
 var button = document.getElementById('button');
+var debug = document.getElementById('debug');
 button.innerHTML = 'loading';
 
 // shaders file to load
@@ -15,8 +16,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 64;
-	const height = 64;
+	const width = 32;
+	const height = 32;
+	const MAXIMUM_MESHES = 20;
 	const count = 1;
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
@@ -36,7 +38,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var geometries = [];
 	var attributes = null;
 	var currentGeometry = 0;
-	const MAXIMUM_MESHES = 20;
 	
 	// post process
 	const scene = twgl.createFramebufferInfo(gl);
@@ -102,7 +103,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
 		// if (compute)
-		// if (keyboard.Space.down)
+		if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
 			// draw position
@@ -138,23 +139,19 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			// reset geometry
 			if (attributes === null || updatePointSize || updateSeed)
 			{
-				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
+				attributes = null;
 				geometries = [];
 				currentGeometry = 0;
 			}
 			// create new geometry for 256*256 vertices limit
 			else if (attributes.position.length/3 + width*height > 256*256)
 			{
-				attributes = geometry.pointcloud(positions, colors, normals, pointSize);
+				attributes = null;
 				geometries.push({});
 				if (currentGeometry == MAXIMUM_MESHES) geometries.shift();
 				else ++currentGeometry;
 			}
-			// merge points in geometry
-			else
-			{
-				attributes = geometry.mergePointcloud(attributes, positions, colors, normals, pointSize);
-			}
+			attributes = geometry.pointcloud(attributes, positions, colors, normals, pointSize);
 
 			geometries[currentGeometry] = twgl.createBufferInfoFromArrays(gl, attributes);
 
@@ -196,6 +193,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		
 		// loop
 		requestAnimationFrame(render);
+
+		debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
 
 	}
 

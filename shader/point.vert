@@ -2,10 +2,12 @@ precision mediump float;
 
 attribute vec4 position;
 attribute vec4 color;
+attribute vec3 normal;
 
-uniform mat4 viewProjection;
+uniform mat4 viewProjection, view;
 uniform float time;
 uniform vec2 resolution;
+uniform vec3 camera;
 
 varying vec4 vColor;
 
@@ -18,5 +20,6 @@ void main ()
 {
 	gl_Position = viewProjection * position;
 	// gl_PointSize = 1.;
-	vColor = color;
+	vec3 v = normalize((view * position).xyz - camera);
+	vColor = color * abs(dot(normal, v));
 }
