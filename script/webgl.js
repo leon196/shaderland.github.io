@@ -19,7 +19,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	const width = 512;
 	const height = 512;
 	const MAXIMUM_MESHES = 20;
-	const count = Math.floor(width/64);
+	const count = Math.floor(width/32);
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
@@ -75,6 +75,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		camera: camera.position,
 		target: camera.target,
 		ray: camera.ray,
+		pointSize: 4,
+		blueNoise: twgl.createTexture(gl, { src: "asset/bluenoise1.jpg" }),
 	};
 
 	var pointSize = 0.001;
@@ -99,7 +101,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		}
 
 		var updatePointSize = mouse.delta.z != 0;
-		pointSize = Math.max(0.0001, Math.min(0.1, pointSize - mouse.delta.z * 0.0002));
+		// pointSize = Math.max(0.0001, Math.min(0.1, pointSize - mouse.delta.z * 0.0002));
+		uniforms.pointSize = Math.max(1, Math.min(10, uniforms.pointSize - mouse.delta.z * 0.1));
 		mouse.delta.z = 0.0;
 
 		// var distance = arrayLength(uniforms.camera, camera.position);

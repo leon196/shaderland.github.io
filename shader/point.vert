@@ -7,7 +7,7 @@ attribute vec2 texcoord;
 
 uniform sampler2D framePosition, frameColor, frameNormal;
 uniform mat4 viewProjection, view;
-uniform float time;
+uniform float time, pointSize;
 uniform vec2 resolution;
 uniform vec3 camera;
 
@@ -32,16 +32,16 @@ void main ()
 	// vec3 y = normalize(cross(z, x));
 	// pos.xyz += (x * anchor.x + y * anchor.y) * size;
 	gl_Position = viewProjection * pos;
-	gl_PointSize = 4.;
+	gl_PointSize = pointSize;
 	// vec4 colorSpecular = vec4(1);
 	// vec4 colorLight = vec4(0.9,0,0,1);
-	// vec3 v = normalize(position.xyz - camera);
+	// vec3 v = normalize(pos.xyz - camera);
 	// vec3 l = normalize(position.xyz - camera - vec3(0,1,0));
-	// float shade = abs(dot(normal, v));
+	// float shade = abs(dot(texture2D(frameNormal, position.xy).xyz, v));
 	// float shadeL = dot(normal, l)*0.5+0.5;
 	// // float light = pow(shadeL, 4.);
 	// float light = shade;
 	// float specular = pow(shade, 40.);
 	// vColor = color * light;// + colorLight * light;
-	vColor = texture2D(frameColor, position.xy);
+	vColor = texture2D(frameColor, position.xy);// * shade;
 }

@@ -66,7 +66,7 @@ mouse.ontouchdown = function(event)
 {
   event.stopPropagation();
   event.preventDefault();
-  element.requestFullscreen();
+  // element.requestFullscreen();
   mouse.clic = true;
   mouse.x = event.changedTouches[0].clientX;
   mouse.y = event.changedTouches[0].clientY;

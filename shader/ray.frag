@@ -1,6 +1,6 @@
 precision mediump float;
 
-uniform sampler2D framePosition, frameColor;
+uniform sampler2D blueNoise;
 uniform vec3 camera, target, ray;
 uniform vec2 resolution, frameResolution;
 uniform float time, tick, seed, count, currentFrame;
@@ -68,7 +68,7 @@ vec3 look(vec3 from, vec3 to, vec2 uv)
     vec3 z = normalize(to-from);
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    return normalize(z * 2. + x * uv.x + y * uv.y);
+    return normalize(z * 4. + x * uv.x + y * uv.y);
 }
 
 mat2 rot(float a)
@@ -105,21 +105,21 @@ float kif(vec3 p)
 {
     float scene = 1.0;
     float shape = 1.0;
-    rough = 2.0;
-    float r = .2;
+    rough = 0.;
+    float r = .4;
     float a = 1.0;
-    float t =  seed;//+tick*.001;
-    const int count = 16;
+    float t =  seed;//+fract(tick/100.)*.2;//+tick*.001;
+    const int count = 12;
     for (int index = 0; index < count; ++index)
     {
         p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(sin(t/a));
-        shape = length(p)-0.1*a;
+        shape = length(p)-0.2*a;
         // shape = box(p, vec3(0.1*a));
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.1;
+        a /= 1.3;
     }
     return scene;
 }
@@ -169,8 +169,8 @@ float map(vec3 p)
     // scene = box(p, vec3(0.5));
     // scene = kif(p);
     // scene = city(p);
-    // scene = p.y+.1-0.1*fbm(p*4.);
-    scene = city(p);
+    scene = p.y+.1-0.1*fbm(p*4.);
+    // scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
     // rough = shape < scene ? 0.1 : 0.5;
@@ -191,11 +191,16 @@ vec3 getNormal(vec3 p)
 
 void main()
 {
-    vec3 color = vec3(0);
-    vec2 coordinate = ((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
+    vec4 color = vec4(0);
+    vec2 coordinate = texcoord;//((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
+    // uv += (hash21(hash12(coordinate*frameResolution))*2.-1.);
     vec2 uv = (coordinate*2.-1.);
-    uv += (hash21(hash12(coordinate*frameResolution))*2.-1.)*1./frameResolution;
-    // vec3 eye = vec3(1,1.,-1.5);
+    vec2 u = vec2(mod(tick,400.)/400., floor(tick/400.)/400.);
+    vec2 u2 = vec2(mod((tick+45.),400.)/400., floor((tick+45.)/400.)/400.);
+    float a = texture2D(blueNoise, fract(abs(uv + u))).r * TAU * 2.;
+    vec2 offset = vec2(cos(a),sin(a));
+    uv += offset * texture2D(blueNoise, fract(abs(uv + u2))).r;
+    // vec3 eye = vec3(0,0,-1);
     vec3 eye = camera;
     // eye -= target;
     // eye.xz *= rot(3.14/4.);
@@ -204,14 +209,15 @@ void main()
     // float radius = 3.;
     // float radius = 8.;
 
-    const int rebounces = 1;
+    const int rebounces = 2;
     int bounces = rebounces;
 
-    // vec3 target = vec3(0);
+    // vec3 at = vec3(0);
     // target += (hash31(tick)*2.-1.)*.1;
     vec3 at = target;
-    at += (hash32(coordinate*1654.+tick)*2.-1.)*.1;
-    eye += (hash32(coordinate*1328.+tick)*2.-1.)*.01;
+    // 
+    // at += (hash32(coordinate*1654.+tick)*2.-1.)*.1;
+    // eye += (hash32(coordinate*1328.+tick)*2.-1.)*.01;
     // at.xz *= rot(3.14);
     // vec3 z = normalize(eye - target);
     // // eye = z * clamp(length(target - eye), 0., 1.);
@@ -236,8 +242,10 @@ void main()
     vec3 pos = eye;// + ray * dither * 0.1;
     float total = 0.0;
     float shade = 1.0;
-    gl_FragColor = vec4(0);
-    const int steps = 60;
+    // gl_FragColor = vec4(0);
+    const int steps = 50;
+    vec3 normal = vec3(0,1,0);
+    float mat = 0.;
     for (int index = 0; index < steps; ++index)
     {
         float dist = map(pos);
@@ -245,47 +253,61 @@ void main()
         {
             // float shade = float(steps-index)/float(steps);
 
-            if (total + 0.001/shade > 10.)
+            if (total > 10.)
             {
                 break;
             }
             else if (mode == MODE_POSITION)
             {
-                gl_FragColor = vec4(pos, 1);
+                color = vec4(pos, 1);
                 break;
             }
             else if (mode == MODE_COLOR)
             {
-                // vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(material*0.05));
-                shade = float(steps-index)/float(steps);
-                vec3 normal = getNormal(pos);
-                float light = 1.-pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
-                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*(light+0.)+vec3(1,2,3)*total);
-                // palette *= 1.-mod(material, 2.);
-                color += palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
-                // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
-                // if (bounces == rebounces)
-                // {
+                    mat = material;
+                if (bounces == rebounces)
+                {
                 //     color = palette;
-                // }
-                gl_FragColor = vec4(clamp(color, 0., 1.), 1);
+                    shade = float(steps-index)/float(steps);
+                    normal = getNormal(pos);
+                }
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.1);
+                // vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(materialerial*0.05));
+                // shade = float(steps-index)/float(steps);
+                // vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*(light+0.)+vec3(1,2,3)*total);
+                // vec3 normal = getNormal(pos);
+                float light = pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
+                rough = 1.0;
+                // float light = 1.-pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
+                // palette *= 1.-mod(material, 2.);
+                // rough *= 1.-mod(material, 2.);
+                // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
+                // color = mix(color, palette, (float(bounces)/float(rebounces)));
+                color.rgb += palette * shade;// mix(color, palette, (float(bounces)/float(rebounces)));
+                // gl_FragColor = vec4(clamp(color, 0., 1.), 1);
                 // gl_FragColor = floor(gl_FragColor*lod)/lod;
+                // bounces -= 1;
                 if (--bounces == 0)
                 {
+                    // color /= 4.;
+                    // color = vec4(1);
+                    // shade = float(steps-index)/float(steps);
+                    color.rgb *= shade;
+                    // color.rgb /= 2.;
                     break;
                 }
                 else
                 {
-                    vec3 rn = (hash33(pos*1000.+time)*2.-1.);
-                    // if (dot(rn, normal) < 0.0) { rn *= -1.0; }
+                    vec3 rn = (hash33(pos*1000.+tick)*2.-1.);
+                    if (dot(rn, normal) < 0.0) { rn *= -1.0; }
                     ray = normalize(reflect(ray, normal) + rn * rough);
-                    dist = 0.01;
+                    dist = .01;//*dither;
                     total = 0.;
                 }
             }
             else if (mode == MODE_NORMAL)
             {
-                gl_FragColor = vec4(getNormal(pos), 1);
+                color = vec4(getNormal(pos), 1);
                 break;
             }
 
@@ -294,4 +316,6 @@ void main()
         total += dist;
         pos += ray * dist;
     }
+    
+    gl_FragColor = color;
 }
