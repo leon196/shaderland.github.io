@@ -84,6 +84,43 @@ var geometry = {
         return attributes;
     },
 
+    grid: function(dimensions, subdivisions)
+    {
+        var attributes = { position: [], color: [], indices: [] };
+        var width = dimensions[0];
+        var height = dimensions[1];
+        var w = width/subdivisions[0];
+        var h = height/subdivisions[1];
+        var index = 0;
+        for (var x = 0; x <= subdivisions[0]; ++x)
+        {
+            attributes.position.push(x * w - width/2, 0, +height/2);
+            attributes.position.push(x * w - width/2, 0, -height/2);
+            attributes.indices.push(index, index + 1);
+            index += 2;
+
+            var color = [0.3,0.3,0.3,1];
+            if (x == 0 || x == subdivisions[0]) color = [1,1,1,1];
+            else if (x == subdivisions[0]/2) color = [1,0,0,1];
+            color.forEach(rgba => attributes.color.push(rgba));
+            color.forEach(rgba => attributes.color.push(rgba));
+        }
+        for (var y = 0; y <= subdivisions[1]; ++y)
+        {
+            attributes.position.push(+width/2, 0, y * h - height/2);
+            attributes.position.push(-width/2, 0, y * h - height/2);
+            attributes.indices.push(index, index + 1);
+            index += 2;
+            
+            var color = [0.3,0.3,0.3,1];
+            if (y == 0 || y == subdivisions[1]) color = [1,1,1,1];
+            else if (y == subdivisions[1]/2) color = [0,0,1,1];
+            color.forEach(rgba => attributes.color.push(rgba));
+            color.forEach(rgba => attributes.color.push(rgba));
+        }
+        return attributes;
+    },
+
     circle: function(segments)
     {
         var attributes = { position: [], indices: [] };

@@ -7,7 +7,7 @@ var debug = document.getElementById('debug');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag','point.vert'], function(shaders)
+loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag','point.vert','line.vert'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	gl.getExtension('OES_texture_float');
@@ -46,6 +46,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	}
 	var attributes = null;
 	var currentGeometry = 0;
+	var grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
 	
 	// post process
 	const scene = twgl.createFramebufferInfo(gl);
@@ -59,6 +60,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var materials = {};
 	var materialMap = {
 		'geometry': ['geometry.vert', 'color.frag'],
+		'line': ['line.vert', 'color.frag'],
 		'point': ['point.vert', 'color.frag'],
 		'test': ['screen.vert', 'test.frag'],
 		'ray': ['screen.vert', 'ray.frag'],
@@ -180,6 +182,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		{
 			draw(materials['point'], geometries[index], gl.POINTS);
 		}
+
+		draw(materials["line"], grid, gl.LINES);
 		
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;

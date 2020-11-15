@@ -169,7 +169,7 @@ float map(vec3 p)
     // scene = box(p, vec3(0.5));
     // scene = kif(p);
     // scene = city(p);
-    scene = p.y+.1-0.1*fbm(p*4.);
+    scene = p.y+.5-0.5*fbm(p);
     // scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;

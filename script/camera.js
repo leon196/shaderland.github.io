@@ -4,7 +4,7 @@ const v3 = twgl.v3;
 
 var camera = {};
 
-camera.position = [0,0,-1];
+camera.position = [0,2,-4];
 camera.target = [0,0,0];
 camera.ray = [0,0,1];
 camera.velocity = [0,0,0];
