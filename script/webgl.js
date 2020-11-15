@@ -16,26 +16,34 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 64;
-	const height = 64;
+	const width = 512;
+	const height = 512;
 	const MAXIMUM_MESHES = 20;
-	const count = 1;
+	const count = Math.floor(width/64);
 	const attachments = [ 
 		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
 	]
-	const frames = { position: [], color: [], normal: [] };
-	for (var index = 0; index < count; ++index)
-	{
-		frames.position.push(twgl.createFramebufferInfo(gl, attachments, width, height));
-		frames.color.push(twgl.createFramebufferInfo(gl, attachments, width, height));
-		frames.normal.push(twgl.createFramebufferInfo(gl, attachments, width, height));
+	const frames = {
+		position: twgl.createFramebufferInfo(gl, attachments, width, height),
+		color: twgl.createFramebufferInfo(gl, attachments, width, height),
+		normal: twgl.createFramebufferInfo(gl, attachments, width, height)
 	}
 	
 	// point cloud
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width * height));
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.quad, width * height));
 	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.points(width * height));
+	const meshCount = Math.ceil((width*height)/(256*256));
+	console.log("mesh count is " + meshCount);
+	console.log("vertex count is " + width*height);
 	var geometries = [];
+	for (var index = 0; index < meshCount; ++index)
+	{
+		var vertexCount = 256*256;
+		if (index == meshCount-1) vertexCount = (width*height)-(meshCount-1)*256*256;
+		console.log(vertexCount);
+		geometries.push(twgl.createBufferInfoFromArrays(gl, geometry.points(vertexCount)));
+	}
 	var attributes = null;
 	var currentGeometry = 0;
 	
@@ -103,39 +111,35 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
 		// if (compute)
-		if (keyboard.Space.down)
+		// if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
+			const rect = [
+				(currentFrame%count)*(width/count),
+				Math.floor(currentFrame/count)*(height/count),
+				width/count,
+				height/count
+			];
+			
+			uniforms.frameRect = rect;
+			gl.viewport(rect[0], rect[1], rect[2], rect[3]);
+
 			// draw position
 			uniforms.mode = 0;
-			setFramebuffer(frames.position[currentFrame])
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position.framebuffer);
 			draw(materials['ray'], quad, gl.TRIANGLES);
-
-			// read position
-			var positions = new Float32Array(width * height * 4);
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position[currentFrame].framebuffer);
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, positions);
-
+			
 			// draw color
 			uniforms.mode = 1;
-			setFramebuffer(frames.color[currentFrame])
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color.framebuffer);
 			draw(materials['ray'], quad, gl.TRIANGLES);
-
-			// read color
-			var colors = new Float32Array(width * height * 4);
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color[currentFrame].framebuffer);
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, colors);
 
 			// draw normal
 			uniforms.mode = 2;
-			setFramebuffer(frames.normal[currentFrame])
+			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.normal.framebuffer);
 			draw(materials['ray'], quad, gl.TRIANGLES);
 
-			// read normal
-			var normals = new Float32Array(width * height * 4);
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.normal[currentFrame].framebuffer);
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.FLOAT, normals);
-			
+			/*
 			// reset geometry
 			if (attributes === null || updatePointSize || updateSeed)
 			{
@@ -154,10 +158,13 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			attributes = geometry.pointcloud(attributes, positions, colors, normals, pointSize);
 
 			geometries[currentGeometry] = twgl.createBufferInfoFromArrays(gl, attributes);
-
-			currentFrame = (currentFrame + 1) % count;
+			*/
+			currentFrame = (currentFrame + 1) % (count*count);
 
 		}
+		uniforms.framePosition = frames.position.attachments[0];
+		uniforms.frameColor = frames.color.attachments[0];
+		uniforms.frameNormal = frames.normal.attachments[0];
 		
 		// prepare render
 		setFramebuffer(scene);
@@ -168,12 +175,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// render scene
 		for (var index = 0; index < geometries.length; ++index)
 		{
-			draw(materials['point'], geometries[index], gl.TRIANGLES);
+			draw(materials['point'], geometries[index], gl.POINTS);
 		}
 		
-		uniforms.framePosition = frames.position[currentFrame].attachments[0];
-		uniforms.frameColor = frames.color[currentFrame].attachments[0];
-		uniforms.frameNormal = frames.normal[currentFrame].attachments[0];
 		uniforms.scene = scene.attachments[0];
 		uniforms.currentFrame = currentFrame;
 

@@ -5,11 +5,9 @@ uniform vec3 camera, target, ray;
 uniform vec2 resolution, frameResolution;
 uniform float time, tick, seed, count, currentFrame;
 uniform float mode;
+uniform vec4 frameRect;
 
 varying vec2 texcoord;
-
-#define PI 3.1415
-#define TAU 6.283
 
 const float MODE_POSITION = 0.0;
 const float MODE_COLOR = 1.0;
@@ -18,10 +16,28 @@ const float MODE_NORMAL = 2.0;
 float material;
 float rough;
 
+
+
+#define PI 3.1415
+#define TAU 6.283
+#define repeat(p,r) (mod(p+r/2.,r)-r/2.)
+
 // Dave Hoskins
 // https://www.shadertoy.com/view/4djSRW
-float hash11(float p) { p = fract(p * .1031); p *= p + 33.33; p *= p + p; return fract(p); }
-float hash12(vec2 p) { vec3 p3  = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+
+float hash11(float p)
+{
+    p = fract(p * .1031);
+    p *= p + 33.33; p *= p + p; return fract(p);
+}
+
+float hash12(vec2 p)
+{
+    vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 float hash13(vec3 p3) { p3  = fract(p3 * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec2 hash21(float p) { vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx+p3.yz)*p3.zy); }
 vec2 hash22(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx+33.33); return fract((p3.xx+p3.yz)*p3.zy); }
@@ -46,7 +62,6 @@ float smin (float a, float b, float r) {
     return mix(b,a,h)-r*h*(1.-h);
 }
 
-#define repeat(p,r) (mod(p+r/2.,r)-r/2.)
 
 vec3 look(vec3 from, vec3 to, vec2 uv)
 {
@@ -75,6 +90,7 @@ float noise(vec3 x) {
                mix(mix( hash(n + dot(step, vec3(0, 0, 1))), hash(n + dot(step, vec3(1, 0, 1))), u.x),
                    mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
 }
+
 float fbm (vec3 p) {
   float amplitude = 0.5;
   float result = 0.0;
@@ -153,7 +169,8 @@ float map(vec3 p)
     // scene = box(p, vec3(0.5));
     // scene = kif(p);
     // scene = city(p);
-    scene = p.y+.1-0.1*fbm(p*4.);
+    // scene = p.y+.1-0.1*fbm(p*4.);
+    scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
     // rough = shape < scene ? 0.1 : 0.5;
@@ -175,8 +192,9 @@ vec3 getNormal(vec3 p)
 void main()
 {
     vec3 color = vec3(0);
-    vec2 uv = (texcoord*2.-1.);
-    uv += (hash21(hash12(texcoord*frameResolution))*2.-1.)*1./frameResolution;
+    vec2 coordinate = ((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
+    vec2 uv = (coordinate*2.-1.);
+    uv += (hash21(hash12(coordinate*frameResolution))*2.-1.)*1./frameResolution;
     // vec3 eye = vec3(1,1.,-1.5);
     vec3 eye = camera;
     // eye -= target;
@@ -192,8 +210,8 @@ void main()
     // vec3 target = vec3(0);
     // target += (hash31(tick)*2.-1.)*.1;
     vec3 at = target;
-    at += (hash32(texcoord*1654.+tick)*2.-1.)*.1;
-    eye += (hash32(texcoord*1328.+tick)*2.-1.)*.01;
+    at += (hash32(coordinate*1654.+tick)*2.-1.)*.1;
+    eye += (hash32(coordinate*1328.+tick)*2.-1.)*.01;
     // at.xz *= rot(3.14);
     // vec3 z = normalize(eye - target);
     // // eye = z * clamp(length(target - eye), 0., 1.);
@@ -212,14 +230,14 @@ void main()
     // float angle = t;
     // vec2 offset = vec2(cos(angle), sin(angle))/100.;
     // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    float dither = hash12(texcoord * resolution);
+    float dither = hash12(coordinate * frameResolution);
     vec3 ray = look(eye, at, uv);
     // ray.xz *= rot(3.14/4.);
     vec3 pos = eye;// + ray * dither * 0.1;
     float total = 0.0;
     float shade = 1.0;
     gl_FragColor = vec4(0);
-    const int steps = 30;
+    const int steps = 60;
     for (int index = 0; index < steps; ++index)
     {
         float dist = map(pos);

@@ -6,7 +6,39 @@ var geometry = {
         var attributes = { position: [] };
         for (var index = 0; index < count; ++index)
         {
-            attributes.position.push(index / (count - 1), index, 0);
+            // attributes.position.push(index / (count - 1), index, 0);
+            attributes.position.push(Math.random(), Math.random(), 0);
+        }
+        return attributes;
+    },
+
+    pointmap: function(dimension)
+    {
+        var attributes = { position:[], texcoord: [] };
+        for (var point = 0; point < dimension * dimension; ++point)
+        {
+            attributes.position.push(point / (dimension * dimension - 1), point, 0);
+            attributes.texcoord.push((point%dimension)/dimension, Math.floor(point/dimension)/dimension);
+        }
+        return attributes;
+    },
+
+    pointcloudmap: function(dimension)
+    {
+        var attributes = { position:[], texcoord: [], indices: [] };
+        const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0,];
+        const indices = [0, 1, 2, 2, 3, 0];
+        for (var point = 0; point < dimension * dimension; ++point)
+        {
+            for (var vertex = 0; vertex < 4; ++vertex)
+            {
+                attributes.position.push(position[vertex*3], position[vertex*3+1], position[vertex*3+2]);
+                attributes.texcoord.push((point%dimension)/dimension, Math.floor(point/dimension)/dimension);
+            }
+            for (var index = 0; index < 6; ++index)
+            {
+                attributes.indices.push(point*4 + indices[index]);
+            }
         }
         return attributes;
     },
