@@ -20,6 +20,15 @@ void main ()
 {
 	gl_Position = viewProjection * position;
 	// gl_PointSize = 1.;
-	vec3 v = normalize((view * position).xyz - camera);
-	vColor = color * abs(dot(normal, v));
+	vec4 colorSpecular = vec4(1);
+	vec4 colorLight = vec4(0.9,0,0,1);
+	vec3 v = normalize(position.xyz - camera);
+	vec3 l = normalize(position.xyz - camera - vec3(0,1,0));
+	float shade = abs(dot(normal, v));
+	float shadeL = dot(normal, l)*0.5+0.5;
+	// float light = pow(shadeL, 4.);
+	float light = shade;
+	float specular = pow(shade, 40.);
+	vColor = color * light;// + colorLight * light;
+	// vColor = vec4(v, 1);
 }

@@ -53,7 +53,7 @@ vec3 look(vec3 from, vec3 to, vec2 uv)
     vec3 z = normalize(to-from);
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    return normalize(z + x * uv.x + y * uv.y);
+    return normalize(z * 2. + x * uv.x + y * uv.y);
 }
 
 mat2 rot(float a)
@@ -79,7 +79,7 @@ float fbm (vec3 p) {
   float amplitude = 0.5;
   float result = 0.0;
   for (float index = 0.0; index <= 3.0; ++index) {
-    result += abs(sin(noise(p / amplitude) * PI * 8.)) * amplitude;
+    result += pow(abs(sin(noise(p / amplitude) * PI * 8.)), .1) * amplitude;
     amplitude /= 2.;
   }
   return result;
@@ -153,7 +153,7 @@ float map(vec3 p)
     // scene = box(p, vec3(0.5));
     // scene = kif(p);
     // scene = city(p);
-    scene = length(p)-1.+0.1*fbm(p*4.);
+    scene = p.y+.1-0.1*fbm(p*4.);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
     // rough = shape < scene ? 0.1 : 0.5;
@@ -193,6 +193,7 @@ void main()
     // target += (hash31(tick)*2.-1.)*.1;
     vec3 at = target;
     at += (hash32(texcoord*1654.+tick)*2.-1.)*.1;
+    eye += (hash32(texcoord*1328.+tick)*2.-1.)*.01;
     // at.xz *= rot(3.14);
     // vec3 z = normalize(eye - target);
     // // eye = z * clamp(length(target - eye), 0., 1.);
@@ -240,16 +241,16 @@ void main()
                 // vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(material*0.05));
                 shade = float(steps-index)/float(steps);
                 vec3 normal = getNormal(pos);
-                float light = pow(dot(normal, -ray)*0.5+0.5, 8.);
-                vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*shade*1.+vec3(1,2,3)*total);
+                float light = 1.-pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*(light+0.)+vec3(1,2,3)*total);
                 // palette *= 1.-mod(material, 2.);
-                color += vec3(1);//palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
+                color += palette;///float(rebounces-bounces+1);// * float(bounces)/float(rebounces);
                 // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
                 // if (bounces == rebounces)
                 // {
                 //     color = palette;
                 // }
-                gl_FragColor = vec4(clamp(color * shade, 0., 1.), 1);
+                gl_FragColor = vec4(clamp(color, 0., 1.), 1);
                 // gl_FragColor = floor(gl_FragColor*lod)/lod;
                 if (--bounces == 0)
                 {

@@ -16,8 +16,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	// frames point cloud
 	var compute = true;
 	var currentFrame = 0;
-	const width = 32;
-	const height = 32;
+	const width = 64;
+	const height = 64;
 	const MAXIMUM_MESHES = 20;
 	const count = 1;
 	const attachments = [ 
@@ -95,10 +95,10 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		mouse.delta.z = 0.0;
 
 		// var distance = arrayLength(uniforms.camera, camera.position);
-		var damping = Math.max(0, Math.min(1, deltaTime * 3));
-		uniforms.camera = mixArray(uniforms.camera, camera.position, damping);
-		uniforms.target = mixArray(uniforms.target, camera.target, damping);
-		uniforms.ray = mixArray(uniforms.ray, camera.ray, damping);
+		// var damping = Math.max(0, Math.min(1, deltaTime * 3));
+		uniforms.camera = camera.position;//mixArray(uniforms.camera, camera.position, damping);
+		uniforms.target = camera.target;//mixArray(uniforms.target, camera.target, damping);
+		uniforms.ray = camera.ray;//mixArray(uniforms.ray, camera.ray, damping);
 		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
 		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
 
