@@ -104,4 +104,13 @@ var PointCloud = function(gl, ray)
         twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.color, this.colors);
         
     };
+
+    this.reset = function()
+    {
+        for (var i = 0; i < this.positions.length; ++i)
+        {
+            this.positions[i] = 1;
+        }
+        twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.position, this.positions);
+    }
 }

@@ -38,17 +38,21 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// input
 		mouse.update();
 
-		// new seed
-		var updateSeed = keyboard.R.down;
-		if (updateSeed)
-		{
-			uniforms.seed = Math.random() * 1000;
-			keyboard.R.down = false;
-		}
-
+		var reset = keyboard.R.down || keyboard.Space.down || mouse.delta.z != 0;
+		
 		// point size
 		uniforms.pointSize = Math.max(.001, Math.min(0.1, uniforms.pointSize - mouse.delta.z * 0.001));
 		mouse.delta.z = 0.0;
+
+		if (reset)
+		{
+			pointClouds.forEach(pointCloud => pointCloud.reset());
+		}
+		if (keyboard.Space.down)
+		{
+			uniforms.seed = Math.random() * 1000;
+		}
+
 
 		// camera
 		camera.update(deltaTime);
