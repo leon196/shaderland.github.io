@@ -10,10 +10,11 @@ camera.ray = [0,0,1];
 camera.velocity = [0,0,0];
 camera.fieldOfView = 60;
 camera.projection = m4.identity();
+camera.drag = { x: 0, y: 0 };
 
 camera.resize = function(width, height)
 {
-    camera.projection = m4.perspective(camera.fieldOfView * Math.PI / 180, width / height, 0.001, 100.0);
+    camera.projection = m4.perspective(camera.fieldOfView * Math.PI / 180, width / height, 0.01, 100.0);
 }
 
 // var radius = 3.+mouse.drag.z;
@@ -25,11 +26,13 @@ camera.update = function (deltaTime)
 {
     var m = m4.identity();
     // m = m4.translate(m, camera.position);
+    // camera.drag.x += mouse.delta.x / 500;
+    // camera.drag.y += mouse.delta.y / 500;
     m = m4.axisRotate(m, [0, 1, 0], mouse.drag.x / 500);
     m = m4.axisRotate(m, [-1, 0, 0], mouse.drag.y / 500);
     m = m4.translate(m, [0,0,1]);
-    const speed = 0.01;
-    const damping = 0.9;
+    const speed = 0.005;
+    const damping = 0.8;
     camera.ray = m4.getTranslation(m);
     camera.right = v3.cross([0, 1, 0], camera.ray);
     var direction = [0,0,0];

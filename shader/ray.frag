@@ -109,18 +109,43 @@ float kif(vec3 p)
     float r = 1.5;
     float a = 1.0;
     float t =  seed;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
-    const int count = 4;
+    const int count = 16;
     for (int index = 0; index < count; ++index)
     {
-        p.xz = abs(p.xz)-r*a;
+        p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(sin(t/a));
         shape = length(p)-0.85*a;
         // shape = box(p, vec3(0.1*a));
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.8;
+        a /= 1.2;
     }
+    return scene;
+}
+
+float cavern(vec3 p)
+{
+    float scene = 1.0;
+    float shape = 1.0;
+    rough = 0.;
+    float r = 1.;
+    float a = 1.0;
+    float t =  seed;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
+    const int count = 8;
+    for (int index = 0; index < count; ++index)
+    {
+        p.xz = abs(p.xz)-r*a;
+        p.xz *= rot(t/a);
+        p.yz *= rot(t/a);
+        p.yx *= rot(t/a);
+        shape = length(p)-1.*a;
+        // shape = box(p, vec3(0.1*a));
+        material = shape < scene ? float(index) : material;
+        scene = min(scene, shape);
+        a /= 1.5;
+    }
+    scene = abs(scene)-0.001;
     return scene;
 }
 
@@ -146,44 +171,17 @@ float city(vec3 p)
         scene = min(scene, shape);
         a /= 1.2;
     }
-    // scene = abs(scene)-0.001;
-    scene = max(-scene, 0.);
-
+    scene = abs(scene)-0.001;
     scene = max(box(pp, vec3(5.)), scene);
-    // scene = max(-length(camera-pp)+0.05, scene);
     return scene;
 }
-
-// float ground(vec3 p)
-// {
-//     shape = p.y;
-//     material = shape < scene ? 0. : material;
-//     rough = shape < scene ? 0.5 : 0.;
-//     scene = min(scene, shape);
-// }
 
 float map(vec3 p)
 {
     float scene = 1.0;
-    float shape = 1.0;
-    // p = repeat(p,2.);
-    // p.xz *= rot(time);
-    // p.yz *= rot(time);
-    // scene = box(p, vec3(0.5));
-    // scene = kif(p);
-    scene = city(p);
-    // scene = p.y-1.*fbm(p*.3);
-    // scene = p.y+1.;
+    scene = cavern(p);
     // scene = city(p);
-    // shape = box(p, vec3(0.01,1.,0.01));
-    // material = shape < scene ? 0.0 : material;
-    // rough = shape < scene ? 0.1 : 0.5;
-    // scene = min(scene, shape);
-    
-    // shape = p.y;
-    // material = shape < scene ? 0. : material;
-    // rough = shape < scene ? 0.5 : 0.;
-    // scene = min(scene, shape);
+    // scene = p.y-1.*fbm(p*.3);
     return scene;
 }
 
@@ -195,123 +193,63 @@ vec3 getNormal(vec3 p)
 
 void main()
 {
-    vec4 color = vec4(0);
-    vec2 coordinate = texcoord;//((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
-    vec2 uv = (coordinate*2.-1.);
-    // uv += (hash21(hash12(coordinate*256.+tick+seed))*2.-1.);
-    // vec2 u = vec2(mod(tick,400.)/400., floor(tick/400.)/400.);
-    // vec2 u2 = vec2(mod((tick+45.),400.)/400., floor((tick+45.)/400.)/400.);
-    // float a = texture2D(blueNoise, fract(abs(uv + u))).r * TAU * 2.;
-    // vec2 offset = vec2(cos(a),sin(a));
-    // uv += offset * texture2D(blueNoise, fract(abs(uv + u2))).r;
-    // vec3 eye = vec3(0,2,-4);
-    vec3 eye = camera;
-    // vec3 eye = vec3(0);
-    // vec3 eye = spot;
+    vec2 uv = (texcoord*2.-1.);
+    float dither = hash12(texcoord * frameResolution + seed);
 
-    // vec3 eye = normalize(hash32(coordinate * frameResolution)*2.-1.) * 2.;
-    // eye.y *= 0.1;
-    // eye -= target;
-    // eye.xz *= rot(time);
-    // eye += target;
-    float t = (currentFrame / count) * TAU;// + seed;
-    // float radius = 3.;
-    // float radius = 8.;
-
-    const int rebounces = 1;
-    int bounces = rebounces;
-
-    // vec3 at = vec3(0);
-    // target += (hash31(tick)*2.-1.)*.1;
-    vec3 at = target;
-    // 
-    // at = normalize(hash32(coordinate*1654.+tick+seed)*2.-1.);
-    at += (hash32(coordinate*1654.+tick+seed)*2.-1.)*.1;
-    eye += (hash32(coordinate*1328.+tick+seed)*2.-1.)*.1;
-    // at.xz *= rot(3.14);
-    // vec3 z = normalize(eye - target);
-    // // eye = z * clamp(length(target - eye), 0., 1.);
-    // vec3 x = normalize(cross(z,vec3(0,1,0)));
-    // vec3 y = normalize(cross(z,x));
-    // target += (x * cos(t) + y * sin(t))*0.2;
-
-    // float radius = .1;
-    // eye += (x * cos(t) + y * sin(t))*radius;
+    float total = 0.0;
+    float shade = 1.0;
     material = 0.;
     rough = 0.0;
 
-    // eye.xz *= rot(t * 0.1);
-    // eye.yz *= rot(t * 0.1);
-    // eye.yx *= rot(t * 0.1);
-    // float angle = t;
-    // vec2 offset = vec2(cos(angle), sin(angle))/100.;
-    // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    float dither = hash12(coordinate * frameResolution + seed);
+    vec3 eye = camera;
+    vec3 at = target;
+    at += (hash32(texcoord*1654.+tick+seed)*2.-1.)*.1;
+    eye += (hash32(texcoord*1328.+tick+seed)*2.-1.)*.1;
     vec3 ray = look(eye, at, uv);
-    // ray.xz *= rot(3.14/4.);
     vec3 pos = eye;// + ray * dither * 0.5;
-    float total = 0.0;
-    float shade = 1.0;
-    // gl_FragColor = vec4(0);
-    const int steps = 30;
     vec3 normal = vec3(0,1,0);
-    float mat = 0.;
+    vec4 color = vec4(0);
+
+    const int steps = 30;
+    const int rebounces = 2;
+    int bounces = rebounces;
+
     for (int index = 0; index < steps; ++index)
     {
         float dist = map(pos);
         if (dist < 0.001)
         {
-            // float shade = float(steps-index)/float(steps);
-
             if (total > 10.)
             {
                 break;
             }
-            else if (mode == MODE_POSITION)
-            {
-                color = vec4(pos, 1);
-                break;
-            }
             else if (mode == MODE_COLOR)
             {
-                    // mat = material;
+                // first hit
                 if (bounces == rebounces)
                 {
-                //     color = palette;
                     shade = float(steps-index)/float(steps);
                     normal = getNormal(pos);
                 }
-                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.1);
-                // vec3 palette = vec3(0.5)+vec3(0.5)*cos(vec3(1,2,3)*(materialerial*0.05));
-                // shade = float(steps-index)/float(steps);
-                // vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*(light+0.)+vec3(1,2,3)*total);
-                // vec3 normal = getNormal(pos);
-                float light = pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
-                rough = .0;
-                // float light = 1.-pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
-                // palette *= 1.-mod(material, 2.);
-                // rough *= 1.-mod(material, 2.);
-                // color += mix(color, palette, 0.5) / float(bounces)/float(rebounces);
-                // color = mix(color, palette, (float(bounces)/float(rebounces)));
-                color.rgb += palette * shade;// mix(color, palette, (float(bounces)/float(rebounces)));
-                // gl_FragColor = vec4(clamp(color, 0., 1.), 1);
-                // gl_FragColor = floor(gl_FragColor*lod)/lod;
-                // bounces -= 1;
+
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2);
+                // palette *= mod(material, 2.);
+                rough = .5;
+                color.rgb += palette * shade;
+
+                // last hit
                 if (--bounces == 0)
                 {
-                    // color /= 4.;
-                    // color = vec4(1);
-                    // shade = float(steps-index)/float(steps);
-                    // color.rgb *= shade;
-                    // color.rgb /= 2.;
+                    color.rgb /= float(rebounces);
                     break;
                 }
+                // bounce
                 else
                 {
                     vec3 rn = (hash33(pos*1000.+tick)*2.-1.);
                     if (dot(rn, normal) < 0.0) { rn *= -1.0; }
                     ray = normalize(reflect(ray, normal) + rn * rough);
-                    dist = .1;//*dither;
+                    dist = 0.1;//*dither;
                     total = 0.;
                 }
             }
@@ -320,12 +258,15 @@ void main()
                 color = vec4(getNormal(pos), 1);
                 break;
             }
-
+            else if (mode == MODE_POSITION)
+            {
+                color = vec4(pos, 1);
+                break;
+            }
         }
         dist *= 0.9 + 0.1 * dither;
         total += dist;
         pos += ray * dist;
     }
-    
     gl_FragColor = color;
 }

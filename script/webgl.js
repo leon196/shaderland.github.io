@@ -16,7 +16,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	const grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
 	const ray = new Ray(gl);
 	const pointClouds = [];
-	const count = 16;
+	const count = 32;
 	for (var i = 0; i < count; ++i) pointClouds.push(new PointCloud(gl, ray));
 	var current = 0;
 	const scene = twgl.createFramebufferInfo(gl);
@@ -38,30 +38,28 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// input
 		mouse.update();
 
-		var reset = keyboard.R.down || keyboard.Space.down || mouse.delta.z != 0;
-		
 		// point size
 		uniforms.pointSize = Math.max(.001, Math.min(0.1, uniforms.pointSize - mouse.delta.z * 0.001));
 		mouse.delta.z = 0.0;
 
-		if (reset)
+		if (keyboard.R.down)
 		{
 			pointClouds.forEach(pointCloud => pointCloud.reset());
 		}
-		if (keyboard.Space.down)
+		if (keyboard.P.down)
 		{
 			uniforms.seed = Math.random() * 1000;
 		}
-
 
 		// camera
 		camera.update(deltaTime);
 
 		// if (compute)
-		// if (keyboard.Space.down)
+		if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
 			uniforms.spot = pointClouds[current].spot;
+			uniforms.frameResolution = [ray.dimension, ray.dimension];
 			ray.update(gl);
 			pointClouds[current].update(gl, ray);
 			if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)

@@ -15,30 +15,9 @@ var PointCloud = function(gl, ray)
     this.normals = new Float32Array(this.vertexCount*4);
     this.colors = new Float32Array(this.vertexCount*4);
     
-    var size = 0.01;
-    const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
-
-    for (var i = 0; i < this.pointCount; ++i)
+    for (var i = 0; i < this.positions.length; ++i)
     {
-        var pos = [ Math.random(), Math.random(), Math.random() ];
-        var z = [ 0.001, 0.001, -1.0 ];
-        var x = v3.normalize(v3.cross(z, [0,1,0]));
-        var y = v3.normalize(v3.cross(x, z));
-        const color = [Math.random(),Math.random(),Math.random(),Math.random()];
-        for (var v = 0; v < 4; ++v)
-        {
-            const xx = position[v*3];
-            const yy = position[v*3+1];
-            const ii = i*4*4 + v*4;
-            this.positions[ii + 0] = pos[0] + (x[0]*xx + y[0]*yy) * size;
-            this.positions[ii + 1] = pos[1] + (x[1]*xx + y[1]*yy) * size;
-            this.positions[ii + 2] = pos[2] + (x[2]*xx + y[2]*yy) * size;
-            this.positions[ii + 3] = 1;
-            this.colors[ii + 0] = color[0];
-            this.colors[ii + 1] = color[1];
-            this.colors[ii + 2] = color[2];
-            this.colors[ii + 3] = color[3];
-        }
+        this.positions[i] = 1;
     }
 
     // Range arrays to read frame buffer
@@ -73,7 +52,7 @@ var PointCloud = function(gl, ray)
         gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.normal.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.normalsRange);
         
-        var size = uniforms.pointSize;
+        var size = (0.2+0.8*Math.pow(Math.random(), 4))*uniforms.pointSize;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
 
         for (var i = 0; i < ray.cursorRange*ray.cursorRange; ++i)
@@ -83,15 +62,16 @@ var PointCloud = function(gl, ray)
             var z = [ this.normalsRange[i*4], this.normalsRange[i*4+1], this.normalsRange[i*4+2] ];
             var x = v3.normalize(v3.cross(z, [0,1,0]));
             var y = v3.normalize(v3.cross(x, z));
+            var bias = Math.random()*0.0001/size;
             
             for (var v = 0; v < 4; ++v)
             {
                 const ii = index*4*4 + v*4;
                 const xx = position[v*3];
                 const yy = position[v*3+1];
-                this.positions[ii + 0] = pos[0] + (x[0]*xx + y[0]*yy) * size;
-                this.positions[ii + 1] = pos[1] + (x[1]*xx + y[1]*yy) * size;
-                this.positions[ii + 2] = pos[2] + (x[2]*xx + y[2]*yy) * size;
+                this.positions[ii + 0] = pos[0] + (x[0]*xx + y[0]*yy) * size + z[0] * bias;
+                this.positions[ii + 1] = pos[1] + (x[1]*xx + y[1]*yy) * size + z[1] * bias;
+                this.positions[ii + 2] = pos[2] + (x[2]*xx + y[2]*yy) * size + z[2] * bias;
                 this.colors[ii+0] = this.colorsRange[i*4+0];
                 this.colors[ii+1] = this.colorsRange[i*4+1];
                 this.colors[ii+2] = this.colorsRange[i*4+2];
