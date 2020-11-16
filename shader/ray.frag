@@ -147,7 +147,7 @@ float cavern(vec3 p)
         scene = min(scene, shape);
         a /= 1.5;
     }
-    scene = abs(scene)-0.001;
+    scene = -scene;
     scene = max(-length(pp)+1., scene);
     return scene;
 }

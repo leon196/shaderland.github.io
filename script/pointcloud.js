@@ -55,7 +55,7 @@ var PointCloud = function(gl, ray)
         gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.normal.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.normalsRange);
         
-        var size = (0.2+0.8*Math.pow(Math.random(), 4))*uniforms.pointSize;
+        var size = (0.2+0.8*Math.pow(Math.random(), 5))*uniforms.pointSize;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
         const stretch = [1, 1];
 
