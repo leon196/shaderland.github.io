@@ -4,13 +4,15 @@ const v3 = twgl.v3;
 
 var camera = {};
 
-camera.position = [0,2,-4];
+camera.position = [0,0,0];
 camera.target = [0,0,0];
 camera.ray = [0,0,1];
 camera.velocity = [0,0,0];
 camera.fieldOfView = 80;
 camera.projection = m4.identity();
 camera.drag = { x: 0, y: 0 };
+camera.volumeNormal = [0,0,1];
+camera.volumeDistance = 1;
 
 camera.resize = function(width, height)
 {
@@ -42,7 +44,15 @@ camera.update = function (deltaTime)
     if (keyboard.D.down) direction = v3.add(direction, v3.mulScalar(camera.right, -1));
     if (keyboard.Q.down) direction = v3.add(direction, [0,-1,0]);
     if (keyboard.E.down) direction = v3.add(direction, [0,+1,0]);
+    
     camera.velocity = v3.add(camera.velocity, v3.mulScalar(v3.normalize(direction), speed));
+    
+    if (camera.volumeDistance > 0)
+    {
+        const collision = Math.max(0, 0.001/camera.volumeDistance - 0.01);
+        camera.velocity = v3.add(camera.velocity, v3.mulScalar(camera.volumeNormal, collision));
+    }
+    
     camera.position = v3.add(camera.position, camera.velocity);
     camera.velocity = v3.mulScalar(camera.velocity, damping);
     camera.target = v3.add(camera.position, camera.ray);

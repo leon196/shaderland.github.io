@@ -54,18 +54,20 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// camera
 		camera.update(deltaTime);
 
-		// if (compute)
-		if (keyboard.Space.down)
-		// if (distance > 0.1)
+		// if (keyboard.Space.down)
 		{
-			uniforms.spot = pointClouds[current].spot;
+			const pointcloud = pointClouds[current];
+			uniforms.spot = pointcloud.spot;
 			uniforms.frameResolution = [ray.dimension, ray.dimension];
+			uniforms.cursor = [ray.cursorRect[0], ray.cursorRect[1]];
 			ray.update(gl);
-			pointClouds[current].update(gl, ray);
+			pointcloud.update(gl, ray);
 			if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)
 			{
 				current = (current + 1) % pointClouds.length;
 			}
+			camera.volumeNormal = [pointcloud.positionsRange[0], pointcloud.positionsRange[1], pointcloud.positionsRange[2]];
+			camera.volumeDistance = pointcloud.positionsRange[3];
 		}
 		
 		

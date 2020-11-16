@@ -2,7 +2,7 @@ precision mediump float;
 
 uniform sampler2D blueNoise;
 uniform vec3 camera, target, ray, spot;
-uniform vec2 resolution, frameResolution;
+uniform vec2 resolution, frameResolution, cursor;
 uniform float time, tick, seed, count, currentFrame;
 uniform float mode;
 uniform vec4 frameRect;
@@ -103,8 +103,8 @@ float fbm (vec3 p) {
 
 float kif(vec3 p)
 {
-    float scene = 1.0;
-    float shape = 1.0;
+    float scene = 100.0;
+    float shape = 100.0;
     rough = 0.;
     float r = 1.5;
     float a = 1.0;
@@ -126,8 +126,10 @@ float kif(vec3 p)
 
 float cavern(vec3 p)
 {
-    float scene = 1.0;
-    float shape = 1.0;
+    vec3 pp = p;
+    p.z = repeat(p.z, 4.);
+    float scene = 100.0;
+    float shape = 100.0;
     rough = 0.;
     float r = 1.;
     float a = 1.0;
@@ -146,14 +148,15 @@ float cavern(vec3 p)
         a /= 1.5;
     }
     scene = abs(scene)-0.001;
+    scene = max(-length(pp)+1., scene);
     return scene;
 }
 
 float city(vec3 p)
 {
     vec3 pp = p;
-    float scene = 1.0;
-    float shape = 1.0;
+    float scene = 100.0;
+    float shape = 100.0;
     rough = 0.1;
     float r = 1.;
     float a = 1.0;
@@ -178,7 +181,7 @@ float city(vec3 p)
 
 float map(vec3 p)
 {
-    float scene = 1.0;
+    float scene = 100.0;
     // scene = kif(p);
     scene = cavern(p);
     // scene = city(p);
@@ -211,7 +214,7 @@ void main()
     vec3 normal = vec3(0,1,0);
     vec4 color = vec4(0);
 
-    const int steps = 30;
+    const int steps = 60;
     const int rebounces = 2;
     int bounces = rebounces;
 
@@ -233,10 +236,10 @@ void main()
                     normal = getNormal(pos);
                 }
 
-                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2);
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2+vec3(1,2,3)*pos.z*.1);
                 // palette *= mod(material, 2.);
                 rough = .5;
-                color.rgb += palette * shade;
+                color.rgb += palette;// * shade;
 
                 // last hit
                 if (--bounces == 0)
@@ -262,6 +265,8 @@ void main()
             else if (mode == MODE_POSITION)
             {
                 color = vec4(pos, 1);
+                vec2 p = texcoord * frameResolution - cursor;
+                if (p.x + p.y <= 1.0) color = vec4(getNormal(camera), map(camera));
                 break;
             }
         }
