@@ -100,6 +100,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		requestAnimationFrame(render);
 
 		debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
+		debug.innerHTML += "<br/>" + pointClouds.length*256*256 + " vertices";
+		debug.innerHTML += "<br/>" + pointClouds.length*256*256/4*2 + " triangles";
 	}
 
 	function draw(material, geometry, mode)

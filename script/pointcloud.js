@@ -12,6 +12,7 @@ var PointCloud = function(gl, ray)
 
     // Attribute arrays
     this.positions = new Float32Array(this.vertexCount*4);
+    this.centers = new Float32Array(this.vertexCount*4);
     this.normals = new Float32Array(this.vertexCount*4);
     this.colors = new Float32Array(this.vertexCount*4);
     
@@ -22,6 +23,7 @@ var PointCloud = function(gl, ray)
 
     // Range arrays to read frame buffer
     this.positionsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
+    this.centersRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
     this.normalsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
     this.colorsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
 
@@ -35,6 +37,7 @@ var PointCloud = function(gl, ray)
     this.attributes =
     {
         position: { data:this.positions, numComponents: 4, drawType: gl.DYNAMIC_DRAW },
+        center: { data:this.centers, numComponents: 4, drawType: gl.DYNAMIC_DRAW },
         normal: { data:this.normals, numComponents: 4, drawType: gl.DYNAMIC_DRAW },
         color: { data:this.colors, numComponents: 4, drawType: gl.DYNAMIC_DRAW },
         indices: { data:this.indices, numComponents: 1 },
@@ -54,6 +57,7 @@ var PointCloud = function(gl, ray)
         
         var size = (0.2+0.8*Math.pow(Math.random(), 4))*uniforms.pointSize;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
+        const stretch = [1, 1];
 
         for (var i = 0; i < ray.cursorRange*ray.cursorRange; ++i)
         {
@@ -62,26 +66,33 @@ var PointCloud = function(gl, ray)
             var z = [ this.normalsRange[i*4], this.normalsRange[i*4+1], this.normalsRange[i*4+2] ];
             var x = v3.normalize(v3.cross(z, [0,1,0]));
             var y = v3.normalize(v3.cross(x, z));
-            var bias = Math.random()*0.0001/size;
+
+            var bias = Math.random()*0.001;///size;
             
             for (var v = 0; v < 4; ++v)
             {
                 const ii = index*4*4 + v*4;
-                const xx = position[v*3];
-                const yy = position[v*3+1];
+                const xx = position[v*3]*stretch[0];
+                const yy = position[v*3+1]*stretch[1];
                 this.positions[ii + 0] = pos[0] + (x[0]*xx + y[0]*yy) * size + z[0] * bias;
                 this.positions[ii + 1] = pos[1] + (x[1]*xx + y[1]*yy) * size + z[1] * bias;
                 this.positions[ii + 2] = pos[2] + (x[2]*xx + y[2]*yy) * size + z[2] * bias;
-                this.colors[ii+0] = this.colorsRange[i*4+0];
-                this.colors[ii+1] = this.colorsRange[i*4+1];
-                this.colors[ii+2] = this.colorsRange[i*4+2];
-                this.colors[ii+3] = this.colorsRange[i*4+3];
+                for (var c = 0; c < 4; ++c)
+                {
+                    this.colors[ii+c] = this.colorsRange[i*4+c];
+                }
+                for (var c = 0; c < 3; ++c)
+                {
+                    this.normals[ii+c] = z[c];
+                    this.centers[ii+c] = pos[c];
+                }
             }
         }
         
         twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.position, this.positions);
-        // twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.normal, this.normals);
+        twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.center, this.centers);
         twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.color, this.colors);
+        twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.normal, this.normals);
         
     };
 

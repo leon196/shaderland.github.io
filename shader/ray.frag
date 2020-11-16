@@ -179,6 +179,7 @@ float city(vec3 p)
 float map(vec3 p)
 {
     float scene = 1.0;
+    // scene = kif(p);
     scene = cavern(p);
     // scene = city(p);
     // scene = p.y-1.*fbm(p*.3);

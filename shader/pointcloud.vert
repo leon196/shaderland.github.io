@@ -1,7 +1,7 @@
 precision mediump float;
 
 attribute vec4 position;
-attribute vec2 texcoord;
+attribute vec4 center;
 attribute vec4 color;
 attribute vec4 normal;
 
@@ -23,6 +23,9 @@ vec3 hash31(float p) { vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973)); p3 
 
 void main ()
 {
+	// vec4 pos = position;
+	// float fade = smoothstep(0.5, 0.0, length(camera - center.xyz));
+	// pos.xyz = mix(pos.xyz, center.xyz, fade);
 	gl_Position = viewProjection * position;
 	vColor = color;
 }

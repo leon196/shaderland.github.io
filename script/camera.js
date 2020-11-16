@@ -8,7 +8,7 @@ camera.position = [0,2,-4];
 camera.target = [0,0,0];
 camera.ray = [0,0,1];
 camera.velocity = [0,0,0];
-camera.fieldOfView = 60;
+camera.fieldOfView = 80;
 camera.projection = m4.identity();
 camera.drag = { x: 0, y: 0 };
 
