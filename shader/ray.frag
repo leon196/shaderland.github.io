@@ -68,7 +68,7 @@ vec3 look(vec3 from, vec3 to, vec2 uv)
     vec3 z = normalize(to-from);
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    return normalize(z * 4. + x * uv.x + y * uv.y);
+    return normalize(z * 2. + x * uv.x + y * uv.y);
 }
 
 mat2 rot(float a)
@@ -106,7 +106,7 @@ float kif(vec3 p)
     float scene = 1.0;
     float shape = 1.0;
     rough = 0.;
-    float r = .4;
+    float r = 1.5;
     float a = 1.0;
     float t =  seed;//+fract(tick/100.)*.2;//+tick*.001;
     const int count = 12;
@@ -115,11 +115,11 @@ float kif(vec3 p)
         p.x = abs(p.x)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(sin(t/a));
-        shape = length(p)-0.2*a;
+        shape = length(p)-0.5*a;
         // shape = box(p, vec3(0.1*a));
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.3;
+        a /= 1.2;
     }
     return scene;
 }
@@ -133,7 +133,7 @@ float city(vec3 p)
     float r = .2;
     float a = 1.0;
     float t =  seed;//+tick*.001;
-    const int count = 16;
+    const int count = 8;
     for (int index = 0; index < count; ++index)
     {
         p = abs(p)-r*a;
@@ -146,8 +146,8 @@ float city(vec3 p)
         scene = min(scene, shape);
         a /= 1.2;
     }
-    scene = abs(scene)-0.001;
-    // scene = max(-scene, 0.);
+    // scene = abs(scene)-0.001;
+    scene = max(-scene, 0.);
     // scene = max(-box(camera-pp, vec3(0.1)), scene);
     // scene = max(-length(camera-pp)+0.05, scene);
     return scene;
@@ -167,9 +167,10 @@ float map(vec3 p)
     float shape = 1.0;
     // p = repeat(p,2.);
     // scene = box(p, vec3(0.5));
-    // scene = kif(p);
+    scene = kif(p);
     // scene = city(p);
-    scene = p.y+.5-0.5*fbm(p);
+    // scene = p.y+.5-0.5*fbm(p);
+    // scene = p.y+1.;
     // scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
     // material = shape < scene ? 0.0 : material;
@@ -193,15 +194,17 @@ void main()
 {
     vec4 color = vec4(0);
     vec2 coordinate = texcoord;//((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
-    // uv += (hash21(hash12(coordinate*frameResolution))*2.-1.);
     vec2 uv = (coordinate*2.-1.);
-    vec2 u = vec2(mod(tick,400.)/400., floor(tick/400.)/400.);
-    vec2 u2 = vec2(mod((tick+45.),400.)/400., floor((tick+45.)/400.)/400.);
-    float a = texture2D(blueNoise, fract(abs(uv + u))).r * TAU * 2.;
-    vec2 offset = vec2(cos(a),sin(a));
-    uv += offset * texture2D(blueNoise, fract(abs(uv + u2))).r;
+    uv += (hash21(hash12(coordinate*256.+tick))*2.-1.);
+    // vec2 u = vec2(mod(tick,400.)/400., floor(tick/400.)/400.);
+    // vec2 u2 = vec2(mod((tick+45.),400.)/400., floor((tick+45.)/400.)/400.);
+    // float a = texture2D(blueNoise, fract(abs(uv + u))).r * TAU * 2.;
+    // vec2 offset = vec2(cos(a),sin(a));
+    // uv += offset * texture2D(blueNoise, fract(abs(uv + u2))).r;
     // vec3 eye = vec3(0,0,-1);
     vec3 eye = camera;
+    // vec3 eye = normalize(hash32(tick + coordinate * frameResolution)*2.-1.) * 2.;
+    // eye.y *= 0.1;
     // eye -= target;
     // eye.xz *= rot(3.14/4.);
     // eye += target;
@@ -243,7 +246,7 @@ void main()
     float total = 0.0;
     float shade = 1.0;
     // gl_FragColor = vec4(0);
-    const int steps = 50;
+    const int steps = 100;
     vec3 normal = vec3(0,1,0);
     float mat = 0.;
     for (int index = 0; index < steps; ++index)

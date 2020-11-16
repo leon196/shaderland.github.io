@@ -101,7 +101,7 @@ var geometry = {
 
             var color = [0.3,0.3,0.3,1];
             if (x == 0 || x == subdivisions[0]) color = [1,1,1,1];
-            else if (x == subdivisions[0]/2) color = [1,0,0,1];
+            else if (x == subdivisions[0]/2) color = [0,0,1,1];
             color.forEach(rgba => attributes.color.push(rgba));
             color.forEach(rgba => attributes.color.push(rgba));
         }
@@ -114,7 +114,7 @@ var geometry = {
             
             var color = [0.3,0.3,0.3,1];
             if (y == 0 || y == subdivisions[1]) color = [1,1,1,1];
-            else if (y == subdivisions[1]/2) color = [0,0,1,1];
+            else if (y == subdivisions[1]/2) color = [1,0,0,1];
             color.forEach(rgba => attributes.color.push(rgba));
             color.forEach(rgba => attributes.color.push(rgba));
         }

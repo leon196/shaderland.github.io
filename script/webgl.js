@@ -7,81 +7,18 @@ var debug = document.getElementById('debug');
 button.innerHTML = 'loading';
 
 // shaders file to load
-loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag','point.vert','line.vert'], function(shaders)
+loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','color.frag','ray.frag','point.vert','line.vert','pointcloud.vert'], function(shaders)
 {
 	const gl = document.getElementById('canvas').getContext('webgl');
 	gl.getExtension('OES_texture_float');
 	const m4 = twgl.m4;
 
-	// frames point cloud
-	var compute = true;
-	var currentFrame = 0;
-	const width = 512;
-	const height = 512;
-	const MAXIMUM_MESHES = 20;
-	const count = Math.floor(width/32);
-	const attachments = [ 
-		{ format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST }
-	]
-	const frames = {
-		position: twgl.createFramebufferInfo(gl, attachments, width, height),
-		color: twgl.createFramebufferInfo(gl, attachments, width, height),
-		normal: twgl.createFramebufferInfo(gl, attachments, width, height)
-	}
-	
-	// point cloud
-	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(twgl.primitives.createPlaneVertices(1, 1, 1, 1), width * height));
-	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.clone(primitive.quad, width * height));
-	// const clones = twgl.createBufferInfoFromArrays(gl, geometry.points(width * height));
-	const meshCount = Math.ceil((width*height)/(256*256));
-	console.log("mesh count is " + meshCount);
-	console.log("vertex count is " + width*height);
-	var geometries = [];
-	for (var index = 0; index < meshCount; ++index)
-	{
-		var vertexCount = 256*256;
-		if (index == meshCount-1) vertexCount = (width*height)-(meshCount-1)*256*256;
-		console.log(vertexCount);
-		geometries.push(twgl.createBufferInfoFromArrays(gl, geometry.points(vertexCount)));
-	}
-	var attributes = null;
-	var currentGeometry = 0;
-	var grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
-	
-	// post process
+	const grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
+	const pointCloud = new PointCloud(gl, 256*256);
 	const scene = twgl.createFramebufferInfo(gl);
 	const quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
 
-	// camera
-	var fieldOfView = 60;
-	var projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.001, 100.0);
-
-	// materials
-	var materials = {};
-	var materialMap = {
-		'geometry': ['geometry.vert', 'color.frag'],
-		'line': ['line.vert', 'color.frag'],
-		'point': ['point.vert', 'color.frag'],
-		'test': ['screen.vert', 'test.frag'],
-		'ray': ['screen.vert', 'ray.frag'],
-		'screen': ['screen.vert', 'screen.frag'],
-	};
-
-	// uniforms
-	var uniforms = {
-		time: 0,
-		tick: 0,
-		count: count,
-		frameResolution: [width, height],
-		seed: Math.random()*1000,
-		camera: camera.position,
-		target: camera.target,
-		ray: camera.ray,
-		pointSize: 4,
-		blueNoise: twgl.createTexture(gl, { src: "asset/bluenoise1.jpg" }),
-	};
-
-	var pointSize = 0.001;
+	uniforms.blueNoise = twgl.createTexture(gl, { src: "asset/bluenoise1.jpg" });
 
 	loadMaterials();
 
@@ -90,11 +27,14 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// time
 		elapsed /= 1000;
 		var deltaTime = elapsed - uniforms.time;
-		// uniforms.time = elapsed;
+		
+		uniforms.time = elapsed;
+		uniforms.tick++;
 
+		// input
 		mouse.update();
-		camera.update(deltaTime);
 
+		// new seed
 		var updateSeed = keyboard.R.down;
 		if (updateSeed)
 		{
@@ -102,74 +42,23 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			keyboard.R.down = false;
 		}
 
-		var updatePointSize = mouse.delta.z != 0;
-		// pointSize = Math.max(0.0001, Math.min(0.1, pointSize - mouse.delta.z * 0.0002));
+		// point size
 		uniforms.pointSize = Math.max(1, Math.min(10, uniforms.pointSize - mouse.delta.z * 0.1));
 		mouse.delta.z = 0.0;
 
-		// var distance = arrayLength(uniforms.camera, camera.position);
-		// var damping = Math.max(0, Math.min(1, deltaTime * 3));
-		uniforms.camera = camera.position;//mixArray(uniforms.camera, camera.position, damping);
-		uniforms.target = camera.target;//mixArray(uniforms.target, camera.target, damping);
-		uniforms.ray = camera.ray;//mixArray(uniforms.ray, camera.ray, damping);
-		uniforms.view = m4.inverse(m4.lookAt(uniforms.camera, uniforms.target, [0, 1, 0]));
-		uniforms.viewProjection = m4.multiply(projection, uniforms.view);
+		// camera
+		camera.update(deltaTime);
 
 		// if (compute)
 		// if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
-			const rect = [
-				(currentFrame%count)*(width/count),
-				Math.floor(currentFrame/count)*(height/count),
-				width/count,
-				height/count
-			];
+			pointCloud.update(gl);
 			
-			uniforms.frameRect = rect;
-			gl.viewport(rect[0], rect[1], rect[2], rect[3]);
-
-			// draw position
-			uniforms.mode = 0;
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.position.framebuffer);
-			draw(materials['ray'], quad, gl.TRIANGLES);
-			
-			// draw color
-			uniforms.mode = 1;
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.color.framebuffer);
-			draw(materials['ray'], quad, gl.TRIANGLES);
-
-			// draw normal
-			uniforms.mode = 2;
-			gl.bindFramebuffer(gl.FRAMEBUFFER, frames.normal.framebuffer);
-			draw(materials['ray'], quad, gl.TRIANGLES);
-
-			/*
-			// reset geometry
-			if (attributes === null || updatePointSize || updateSeed)
-			{
-				attributes = null;
-				geometries = [];
-				currentGeometry = 0;
-			}
-			// create new geometry for 256*256 vertices limit
-			else if (attributes.position.length/3 + width*height > 256*256)
-			{
-				attributes = null;
-				geometries.push({});
-				if (currentGeometry == MAXIMUM_MESHES) geometries.shift();
-				else ++currentGeometry;
-			}
-			attributes = geometry.pointcloud(attributes, positions, colors, normals, pointSize);
-
-			geometries[currentGeometry] = twgl.createBufferInfoFromArrays(gl, attributes);
-			*/
-			currentFrame = (currentFrame + 1) % (count*count);
-
+			uniforms.framePosition = pointCloud.frame.position.attachments[0];
+			uniforms.frameColor = pointCloud.frame.color.attachments[0];
+			uniforms.frameNormal = pointCloud.frame.normal.attachments[0];
 		}
-		uniforms.framePosition = frames.position.attachments[0];
-		uniforms.frameColor = frames.color.attachments[0];
-		uniforms.frameNormal = frames.normal.attachments[0];
 		
 		// prepare render
 		setFramebuffer(scene);
@@ -178,16 +67,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.cullFace(gl.BACK);
 		
 		// render scene
-		for (var index = 0; index < geometries.length; ++index)
-		{
-			draw(materials['point'], geometries[index], gl.POINTS);
-		}
-
 		draw(materials["line"], grid, gl.LINES);
+		draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
 		
-		uniforms.scene = scene.attachments[0];
-		uniforms.currentFrame = currentFrame;
-
 		// final render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 		gl.clearColor(0, 0, 0, 1);
@@ -195,18 +77,15 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.disable(gl.DEPTH_TEST);
 		gl.disable(gl.CULL_FACE);
 		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
+		
 		// post process
+		uniforms.scene = scene.attachments[0];
 		draw(materials['screen'], quad, gl.TRIANGLES);
-
-		uniforms.time = elapsed;
-		uniforms.tick++;
 		
 		// loop
 		requestAnimationFrame(render);
 
 		debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
-
 	}
 
 	function draw(material, geometry, mode)
@@ -229,8 +108,8 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	{
 		twgl.resizeCanvasToDisplaySize(gl.canvas);
 		twgl.resizeFramebufferInfo(gl, scene);
+		camera.resize(gl.canvas.width, gl.canvas.height);
 		uniforms.resolution = [gl.canvas.width, gl.canvas.height];
-		projection = m4.perspective(fieldOfView * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.001, 100.0);
 	}
 
 	function loadMaterials()
