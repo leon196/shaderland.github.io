@@ -1,7 +1,7 @@
 precision mediump float;
 
 uniform sampler2D blueNoise;
-uniform vec3 camera, target, ray;
+uniform vec3 camera, target, ray, spot;
 uniform vec2 resolution, frameResolution;
 uniform float time, tick, seed, count, currentFrame;
 uniform float mode;
@@ -108,18 +108,18 @@ float kif(vec3 p)
     rough = 0.;
     float r = 1.5;
     float a = 1.0;
-    float t =  seed;//+fract(tick/100.)*.2;//+tick*.001;
-    const int count = 12;
+    float t =  seed;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
+    const int count = 4;
     for (int index = 0; index < count; ++index)
     {
-        p.x = abs(p.x)-r*a;
+        p.xz = abs(p.xz)-r*a;
         p.xz *= rot(t/a);
         p.yz *= rot(sin(t/a));
-        shape = length(p)-0.5*a;
+        shape = length(p)-0.85*a;
         // shape = box(p, vec3(0.1*a));
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.2;
+        a /= 1.8;
     }
     return scene;
 }
@@ -130,10 +130,10 @@ float city(vec3 p)
     float scene = 1.0;
     float shape = 1.0;
     rough = 0.1;
-    float r = .2;
+    float r = 1.;
     float a = 1.0;
     float t =  seed;//+tick*.001;
-    const int count = 8;
+    const int count = 16;
     for (int index = 0; index < count; ++index)
     {
         p = abs(p)-r*a;
@@ -148,7 +148,8 @@ float city(vec3 p)
     }
     // scene = abs(scene)-0.001;
     scene = max(-scene, 0.);
-    // scene = max(-box(camera-pp, vec3(0.1)), scene);
+
+    scene = max(box(pp, vec3(5.)), scene);
     // scene = max(-length(camera-pp)+0.05, scene);
     return scene;
 }
@@ -166,10 +167,12 @@ float map(vec3 p)
     float scene = 1.0;
     float shape = 1.0;
     // p = repeat(p,2.);
+    // p.xz *= rot(time);
+    // p.yz *= rot(time);
     // scene = box(p, vec3(0.5));
-    scene = kif(p);
-    // scene = city(p);
-    // scene = p.y+.5-0.5*fbm(p);
+    // scene = kif(p);
+    scene = city(p);
+    // scene = p.y-1.*fbm(p*.3);
     // scene = p.y+1.;
     // scene = city(p);
     // shape = box(p, vec3(0.01,1.,0.01));
@@ -186,7 +189,7 @@ float map(vec3 p)
 
 vec3 getNormal(vec3 p)
 {
-	vec2 e = vec2(.0001, 0.);
+	vec2 e = vec2(.001, 0.);
 	return normalize(.00001+vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));
 }
 
@@ -195,32 +198,36 @@ void main()
     vec4 color = vec4(0);
     vec2 coordinate = texcoord;//((texcoord*frameRect.zw)+frameRect.xy)/frameResolution;
     vec2 uv = (coordinate*2.-1.);
-    uv += (hash21(hash12(coordinate*256.+tick))*2.-1.);
+    // uv += (hash21(hash12(coordinate*256.+tick+seed))*2.-1.);
     // vec2 u = vec2(mod(tick,400.)/400., floor(tick/400.)/400.);
     // vec2 u2 = vec2(mod((tick+45.),400.)/400., floor((tick+45.)/400.)/400.);
     // float a = texture2D(blueNoise, fract(abs(uv + u))).r * TAU * 2.;
     // vec2 offset = vec2(cos(a),sin(a));
     // uv += offset * texture2D(blueNoise, fract(abs(uv + u2))).r;
-    // vec3 eye = vec3(0,0,-1);
+    // vec3 eye = vec3(0,2,-4);
     vec3 eye = camera;
-    // vec3 eye = normalize(hash32(tick + coordinate * frameResolution)*2.-1.) * 2.;
+    // vec3 eye = vec3(0);
+    // vec3 eye = spot;
+
+    // vec3 eye = normalize(hash32(coordinate * frameResolution)*2.-1.) * 2.;
     // eye.y *= 0.1;
     // eye -= target;
-    // eye.xz *= rot(3.14/4.);
+    // eye.xz *= rot(time);
     // eye += target;
     float t = (currentFrame / count) * TAU;// + seed;
     // float radius = 3.;
     // float radius = 8.;
 
-    const int rebounces = 2;
+    const int rebounces = 1;
     int bounces = rebounces;
 
     // vec3 at = vec3(0);
     // target += (hash31(tick)*2.-1.)*.1;
     vec3 at = target;
     // 
-    // at += (hash32(coordinate*1654.+tick)*2.-1.)*.1;
-    // eye += (hash32(coordinate*1328.+tick)*2.-1.)*.01;
+    // at = normalize(hash32(coordinate*1654.+tick+seed)*2.-1.);
+    at += (hash32(coordinate*1654.+tick+seed)*2.-1.)*.1;
+    eye += (hash32(coordinate*1328.+tick+seed)*2.-1.)*.1;
     // at.xz *= rot(3.14);
     // vec3 z = normalize(eye - target);
     // // eye = z * clamp(length(target - eye), 0., 1.);
@@ -239,14 +246,14 @@ void main()
     // float angle = t;
     // vec2 offset = vec2(cos(angle), sin(angle))/100.;
     // vec3 eye = (hash31(tick + seed)*2.-1.)*radius;
-    float dither = hash12(coordinate * frameResolution);
+    float dither = hash12(coordinate * frameResolution + seed);
     vec3 ray = look(eye, at, uv);
     // ray.xz *= rot(3.14/4.);
-    vec3 pos = eye;// + ray * dither * 0.1;
+    vec3 pos = eye;// + ray * dither * 0.5;
     float total = 0.0;
     float shade = 1.0;
     // gl_FragColor = vec4(0);
-    const int steps = 100;
+    const int steps = 30;
     vec3 normal = vec3(0,1,0);
     float mat = 0.;
     for (int index = 0; index < steps; ++index)
@@ -267,7 +274,7 @@ void main()
             }
             else if (mode == MODE_COLOR)
             {
-                    mat = material;
+                    // mat = material;
                 if (bounces == rebounces)
                 {
                 //     color = palette;
@@ -280,7 +287,7 @@ void main()
                 // vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*(light+0.)+vec3(1,2,3)*total);
                 // vec3 normal = getNormal(pos);
                 float light = pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
-                rough = 1.0;
+                rough = .0;
                 // float light = 1.-pow(dot(normal, vec3(0,1,0))*0.5+0.5, 4.);
                 // palette *= 1.-mod(material, 2.);
                 // rough *= 1.-mod(material, 2.);
@@ -295,7 +302,7 @@ void main()
                     // color /= 4.;
                     // color = vec4(1);
                     // shade = float(steps-index)/float(steps);
-                    color.rgb *= shade;
+                    // color.rgb *= shade;
                     // color.rgb /= 2.;
                     break;
                 }
@@ -304,7 +311,7 @@ void main()
                     vec3 rn = (hash33(pos*1000.+tick)*2.-1.);
                     if (dot(rn, normal) < 0.0) { rn *= -1.0; }
                     ray = normalize(reflect(ray, normal) + rn * rough);
-                    dist = .01;//*dither;
+                    dist = .1;//*dither;
                     total = 0.;
                 }
             }
@@ -315,7 +322,7 @@ void main()
             }
 
         }
-        dist *= 0.2 + 0.1 * dither;
+        dist *= 0.9 + 0.1 * dither;
         total += dist;
         pos += ray * dist;
     }

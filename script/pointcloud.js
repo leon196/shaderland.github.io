@@ -1,21 +1,14 @@
 
-var PointCloud = function(gl)
+var PointCloud = function(gl, ray)
 {
     const v3 = twgl.v3;
-
-    // Parameters
-    this.cursorSize = 32;
 
     // Quantities
     this.vertexCount = 256*256;
     this.pointCount = this.vertexCount/4;
     this.dimension = Math.sqrt(this.pointCount);
-    
-    // Cursor brush
-    this.cursor = 0;
-    this.cursorWidth = Math.floor(this.dimension/this.cursorSize);
-    this.cursorRange = this.dimension / this.cursorWidth;
-    this.cursorRect = [ 0, 0, this.cursorRange, this.cursorRange ];
+
+    this.spot = v3.normalize([Math.random()*2-1, Math.random()*2-1, Math.random()*2-1]);
 
     // Attribute arrays
     this.positions = new Float32Array(this.vertexCount*4);
@@ -49,9 +42,9 @@ var PointCloud = function(gl)
     }
 
     // Range arrays to read frame buffer
-    this.positionsRange = new Float32Array(this.cursorRange*this.cursorRange*4);
-    this.normalsRange = new Float32Array(this.cursorRange*this.cursorRange*4);
-    this.colorsRange = new Float32Array(this.cursorRange*this.cursorRange*4);
+    this.positionsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
+    this.normalsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
+    this.colorsRange = new Float32Array(ray.cursorRange*ray.cursorRange*4);
 
     this.indices = [];
     const indices = [0, 1, 2, 2, 3, 0];
@@ -69,51 +62,23 @@ var PointCloud = function(gl)
     };
     
     this.buffer = twgl.createBufferInfoFromArrays(gl, this.attributes);
-    
-    // Framebuffers
-	const attachments = [ { format: gl.RGBA, type: gl.FLOAT, minMag: gl.NEAREST } ]
-	this.frame = {
-		position: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
-		normal: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
-		color: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
-    }
 
-    this.quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
-
-    this.update = function(gl)
+    this.update = function(gl, ray)
     {
-        const rect = [
-            Math.floor(this.cursor % this.cursorWidth) * this.cursorRange,
-            Math.floor(this.cursor / this.cursorWidth) * this.cursorRange,
-            this.cursorRange,
-            this.cursorRange
-        ];
-
-        this.cursorRect = rect;
-        
-        gl.viewport(rect[0], rect[1], rect[2], rect[3]);
-            
-        uniforms.mode = 0;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.position.framebuffer);
-        this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
+        const rect = ray.cursorRect;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.position.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.positionsRange);
-        
-        uniforms.mode = 1;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.color.framebuffer);
-        this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.color.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.colorsRange);
-        
-        uniforms.mode = 2;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.normal.framebuffer);
-        this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.normal.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.normalsRange);
         
-        var size = 0.01;
+        var size = uniforms.pointSize;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
 
-        for (var i = 0; i < this.cursorRange*this.cursorRange; ++i)
+        for (var i = 0; i < ray.cursorRange*ray.cursorRange; ++i)
         {
-            var index = this.cursor * this.cursorRange*this.cursorRange + i;
+            var index = (ray.cursor * ray.cursorRange*ray.cursorRange)%(128*128) + i;
             var pos = [ this.positionsRange[i*4], this.positionsRange[i*4+1], this.positionsRange[i*4+2] ];
             var z = [ this.normalsRange[i*4], this.normalsRange[i*4+1], this.normalsRange[i*4+2] ];
             var x = v3.normalize(v3.cross(z, [0,1,0]));
@@ -138,14 +103,5 @@ var PointCloud = function(gl)
         // twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.normal, this.normals);
         twgl.setAttribInfoBufferFromArray(gl, this.buffer.attribs.color, this.colors);
         
-        this.cursor = (this.cursor + 1) % (this.cursorWidth * this.cursorWidth);
     };
-    
-    this.render = function(gl, material, geometry, mode)
-    {
-		gl.useProgram(material.program);
-		twgl.setBuffersAndAttributes(gl, material, geometry);
-		twgl.setUniforms(material, uniforms);
-		twgl.drawBufferInfo(gl, geometry, mode);
-    }
 }

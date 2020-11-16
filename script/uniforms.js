@@ -7,6 +7,6 @@ var uniforms =
     camera: [0,0,0],
     target: [0,0,0],
     ray: [0,0,0],
-    pointSize: 4,
+    pointSize: 0.01,
     seed: Math.random()*1000,
 };

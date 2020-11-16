@@ -14,7 +14,11 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	const m4 = twgl.m4;
 
 	const grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
-	const pointCloud = new PointCloud(gl, 256*256);
+	const ray = new Ray(gl);
+	const pointClouds = [];
+	const count = 16;
+	for (var i = 0; i < count; ++i) pointClouds.push(new PointCloud(gl, ray));
+	var current = 0;
 	const scene = twgl.createFramebufferInfo(gl);
 	const quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
 
@@ -43,7 +47,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		}
 
 		// point size
-		uniforms.pointSize = Math.max(1, Math.min(10, uniforms.pointSize - mouse.delta.z * 0.1));
+		uniforms.pointSize = Math.max(.001, Math.min(0.1, uniforms.pointSize - mouse.delta.z * 0.001));
 		mouse.delta.z = 0.0;
 
 		// camera
@@ -53,12 +57,15 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// if (keyboard.Space.down)
 		// if (distance > 0.1)
 		{
-			pointCloud.update(gl);
-			
-			uniforms.framePosition = pointCloud.frame.position.attachments[0];
-			uniforms.frameColor = pointCloud.frame.color.attachments[0];
-			uniforms.frameNormal = pointCloud.frame.normal.attachments[0];
+			uniforms.spot = pointClouds[current].spot;
+			ray.update(gl);
+			pointClouds[current].update(gl, ray);
+			if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)
+			{
+				current = (current + 1) % pointClouds.length;
+			}
 		}
+		
 		
 		// prepare render
 		setFramebuffer(scene);
@@ -68,7 +75,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		
 		// render scene
 		draw(materials["line"], grid, gl.LINES);
-		draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
+		pointClouds.forEach(pointCloud => {
+			draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
+		});
 		
 		// final render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -80,6 +89,9 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		
 		// post process
 		uniforms.scene = scene.attachments[0];
+		uniforms.framePosition = ray.frame.position.attachments[0];
+		uniforms.frameColor = ray.frame.color.attachments[0];
+		uniforms.frameNormal = ray.frame.normal.attachments[0];
 		draw(materials['screen'], quad, gl.TRIANGLES);
 		
 		// loop
