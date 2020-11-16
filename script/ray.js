@@ -17,6 +17,7 @@ var Ray = function(gl)
         position: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
         normal: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
         color: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
+        feedback: twgl.createFramebufferInfo(gl, attachments, 4, 4),
     }
 
     this.quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
@@ -46,6 +47,11 @@ var Ray = function(gl)
         
         uniforms.mode = 2;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.normal.framebuffer);
+        this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
+        
+        uniforms.mode = 3;
+        gl.viewport(0, 0, this.frame.feedback.width, this.frame.feedback.height);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.feedback.framebuffer);
         this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
         
         this.cursor = (this.cursor + 1) % (this.cursorWidth * this.cursorWidth);

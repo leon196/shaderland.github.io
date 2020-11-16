@@ -55,7 +55,7 @@ var PointCloud = function(gl, ray)
         gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.normal.framebuffer);
         gl.readPixels(rect[0], rect[1], rect[2], rect[3], gl.RGBA, gl.FLOAT, this.normalsRange);
         
-        var size = (0.2+0.8*Math.pow(Math.random(), 5))*uniforms.pointSize;
+        var pointSize = (0.5+0.5*Math.pow(Math.random(), 3))*uniforms.pointSize;
         const position = [-1, -1, 0, -1, 1, 0, 1, 1, 0, 1, -1, 0];
         const stretch = [1, 1];
 
@@ -67,7 +67,8 @@ var PointCloud = function(gl, ray)
             var x = v3.normalize(v3.cross(z, [0,1,0]));
             var y = v3.normalize(v3.cross(x, z));
 
-            var bias = Math.random()*0.001;///size;
+            const size = pointSize * Math.pow(v3.distance(camera.position, pos)/10., .5);
+            var bias = Math.random()*0.01;///size;
             
             for (var v = 0; v < 4; ++v)
             {

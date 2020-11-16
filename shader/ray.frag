@@ -1,7 +1,7 @@
 precision mediump float;
 
 uniform sampler2D blueNoise;
-uniform vec3 camera, target, ray, spot;
+uniform vec3 camera, cameraVelocity, target, ray, spot;
 uniform vec2 resolution, frameResolution, cursor;
 uniform float time, tick, seed, count, currentFrame;
 uniform float mode;
@@ -12,6 +12,7 @@ varying vec2 texcoord;
 const float MODE_POSITION = 0.0;
 const float MODE_COLOR = 1.0;
 const float MODE_NORMAL = 2.0;
+const float MODE_FEEDBACK = 3.0;
 
 float material;
 float rough;
@@ -133,11 +134,14 @@ float cavern(vec3 p)
     rough = 0.;
     float r = 1.;
     float a = 1.0;
-    float t =  seed;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
+    float t =  seed + pp.z * 0.1;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
     const int count = 8;
     for (int index = 0; index < count; ++index)
     {
         p.xz = abs(p.xz)-r*a;
+        // p.x = abs(p.x)-r*a*0.1;
+        // p.x = abs(p.x)-r*a*0.1;
+        // p.x = abs(p.x)-r*a*0.1;
         p.xz *= rot(t/a);
         p.yz *= rot(t/a);
         p.yx *= rot(t/a);
@@ -149,19 +153,22 @@ float cavern(vec3 p)
     }
     scene = -scene;
     scene = max(-length(pp)+1., scene);
+    scene = max(-length(pp.xy)+.2, scene);
     return scene;
 }
 
 float city(vec3 p)
 {
     vec3 pp = p;
+
+    // p = repeat(p, 5.);
     float scene = 100.0;
     float shape = 100.0;
     rough = 0.1;
-    float r = 1.;
+    float r = .5;
     float a = 1.0;
-    float t =  seed;//+tick*.001;
-    const int count = 16;
+    float t =  seed;// + hash13(floor(pp*5.)) * 3.;//+tick*.001;
+    const int count = 12;
     for (int index = 0; index < count; ++index)
     {
         p = abs(p)-r*a;
@@ -174,8 +181,8 @@ float city(vec3 p)
         scene = min(scene, shape);
         a /= 1.2;
     }
-    scene = abs(scene)-0.001;
-    scene = max(box(pp, vec3(5.)), scene);
+    scene = abs(scene)-0.01;
+    scene = max(-box(pp, vec3(.5)), scene);
     return scene;
 }
 
@@ -197,6 +204,15 @@ vec3 getNormal(vec3 p)
 
 void main()
 {
+    if (mode == MODE_FEEDBACK)
+    {
+	    vec2 e = vec2(.1, 0.);
+        vec3 c = camera + cameraVelocity;
+        vec3 n = normalize(0.0001+vec3(map(c+e.xyy)-map(c-e.xyy),map(c+e.yxy)-map(c-e.yxy),map(c+e.yyx)-map(c-e.yyx)));
+        gl_FragColor = vec4(n, map(c));
+        return;
+    }
+
     vec2 uv = (texcoord*2.-1.);
     float dither = hash12(texcoord * frameResolution + seed);
 
@@ -214,8 +230,8 @@ void main()
     vec3 normal = vec3(0,1,0);
     vec4 color = vec4(0);
 
-    const int steps = 60;
-    const int rebounces = 2;
+    const int steps = 40;
+    const int rebounces = 1;
     int bounces = rebounces;
 
     for (int index = 0; index < steps; ++index)
@@ -223,7 +239,7 @@ void main()
         float dist = map(pos);
         if (dist < 0.001)
         {
-            if (total > 10.)
+            if (total > 40.)
             {
                 break;
             }
@@ -236,15 +252,16 @@ void main()
                     normal = getNormal(pos);
                 }
 
-                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2+vec3(1,2,3)*pos.z*.1);
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2);
                 // palette *= mod(material, 2.);
                 rough = .5;
-                color.rgb += palette;// * shade;
+                color.rgb += palette * pow(shade, 1.2);
 
                 // last hit
                 if (--bounces == 0)
                 {
                     color.rgb /= float(rebounces);
+                    // color.rgb *= shade;
                     break;
                 }
                 // bounce
@@ -265,10 +282,13 @@ void main()
             else if (mode == MODE_POSITION)
             {
                 color = vec4(pos, 1);
-                vec2 p = texcoord * frameResolution - cursor;
-                if (p.x + p.y <= 1.0) color = vec4(getNormal(camera), map(camera));
                 break;
             }
+            // else if (mode == MODE_FEEDBACK)
+            // {
+            //     color = vec4(getNormal(camera), map(camera));
+            //     break;
+            // }
         }
         dist *= 0.9 + 0.1 * dither;
         total += dist;

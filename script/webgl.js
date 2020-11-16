@@ -21,6 +21,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 	var current = 0;
 	const scene = twgl.createFramebufferInfo(gl);
 	const quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
+	const feedback = new Float32Array(4);
 
 	uniforms.blueNoise = twgl.createTexture(gl, { src: "asset/bluenoise1.jpg" });
 
@@ -42,7 +43,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.pointSize = Math.max(.001, Math.min(0.1, uniforms.pointSize - mouse.delta.z * 0.001));
 		mouse.delta.z = 0.0;
 
-		if (keyboard.R.down)
+		if (keyboard.R.down || keyboard.P.down)
 		{
 			pointClouds.forEach(pointCloud => pointCloud.reset());
 		}
@@ -60,14 +61,18 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 			uniforms.spot = pointcloud.spot;
 			uniforms.frameResolution = [ray.dimension, ray.dimension];
 			uniforms.cursor = [ray.cursorRect[0], ray.cursorRect[1]];
+			uniforms.cameraVelocity = camera.velocity;
 			ray.update(gl);
 			pointcloud.update(gl, ray);
 			if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)
 			{
 				current = (current + 1) % pointClouds.length;
 			}
-			camera.volumeNormal = [pointcloud.positionsRange[0], pointcloud.positionsRange[1], pointcloud.positionsRange[2]];
-			camera.volumeDistance = pointcloud.positionsRange[3];
+			
+			gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.feedback.framebuffer);
+			gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, feedback);
+			camera.volumeNormal = [feedback[0], feedback[1], feedback[2]];
+			camera.volumeDistance = feedback[3];
 		}
 		
 		
@@ -96,14 +101,17 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		uniforms.framePosition = ray.frame.position.attachments[0];
 		uniforms.frameColor = ray.frame.color.attachments[0];
 		uniforms.frameNormal = ray.frame.normal.attachments[0];
+		uniforms.frameFeedback = ray.frame.feedback.attachments[0];
 		draw(materials['screen'], quad, gl.TRIANGLES);
 		
 		// loop
 		requestAnimationFrame(render);
 
 		debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
-		debug.innerHTML += "<br/>" + pointClouds.length*256*256 + " vertices";
-		debug.innerHTML += "<br/>" + pointClouds.length*256*256/4*2 + " triangles";
+		debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256) + " vertices";
+		debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256/2) + " triangles";
+		debug.innerHTML += "<br/>" + camera.volumeNormal[0].toFixed(2) + " " + camera.volumeNormal[1].toFixed(2) + " " + camera.volumeNormal[2].toFixed(2);
+		debug.innerHTML += "<br/>" + camera.volumeDistance;
 	}
 
 	function draw(material, geometry, mode)
@@ -137,6 +145,17 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 				[shaders[materialMap[key][0]], shaders[materialMap[key][1]]]);
 			if (program !== null) materials[key] = program;
 		});
+	}
+
+	function formatBigNumber(number)
+	{
+		var n = "" + number;
+		var s = "";
+		for (var c = 0; c < n.length; ++c) {
+			s += n[c];//n.length - c - 1];
+			if (c % 3 == 0) s += " ";
+		}
+		return s;
 	}
 
 	// shader hot-reload

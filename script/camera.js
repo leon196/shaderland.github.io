@@ -4,7 +4,7 @@ const v3 = twgl.v3;
 
 var camera = {};
 
-camera.position = [0,0,0];
+camera.position = [0,0.1,-1];
 camera.target = [0,0,0];
 camera.ray = [0,0,1];
 camera.velocity = [0,0,0];
@@ -33,8 +33,8 @@ camera.update = function (deltaTime)
     m = m4.axisRotate(m, [0, 1, 0], mouse.drag.x / 500);
     m = m4.axisRotate(m, [-1, 0, 0], mouse.drag.y / 500);
     m = m4.translate(m, [0,0,1]);
-    const speed = 0.001;
-    const damping = 0.9;
+    const speed = 0.01;
+    const damping = 0.5;
     camera.ray = m4.getTranslation(m);
     camera.right = v3.cross([0, 1, 0], camera.ray);
     var direction = [0,0,0];
@@ -44,16 +44,14 @@ camera.update = function (deltaTime)
     if (keyboard.D.down) direction = v3.add(direction, v3.mulScalar(camera.right, -1));
     if (keyboard.Q.down) direction = v3.add(direction, [0,-1,0]);
     if (keyboard.E.down) direction = v3.add(direction, [0,+1,0]);
-    if (keyboard.Space.down) direction = v3.add(direction, [0,+2,0]);
     
-    camera.velocity = v3.add(camera.velocity, v3.mulScalar(v3.normalize(direction), speed));
-    
-    if (camera.volumeDistance > 0)
+    if (camera.volumeDistance != 0 && camera.volumeDistance < 0.1)
     {
-        const collision = Math.min(0.1, Math.max(0, 0.0001/Math.max(camera.volumeDistance, 0.001)));
-        camera.velocity = v3.add(camera.velocity, v3.mulScalar(camera.volumeNormal, collision));
+        const collision = Math.min(1, Math.max(0, 0.01/Math.max(camera.volumeDistance, 0.0)));
+        camera.velocity = v3.add(camera.velocity, v3.mulScalar(camera.volumeNormal, collision*speed));
     }
     
+    camera.velocity = v3.add(camera.velocity, v3.mulScalar(v3.normalize(direction), speed));
     camera.position = v3.add(camera.position, camera.velocity);
     camera.velocity = v3.mulScalar(camera.velocity, damping);
     camera.target = v3.add(camera.position, camera.ray);
