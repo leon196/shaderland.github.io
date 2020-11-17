@@ -8,6 +8,9 @@ var keyboard = {}
 
 keyboard.P = new Key(80)
 keyboard.Space = new Key(32)
+keyboard.Shift = new Key(16)
+keyboard.Control = new Key(17)
+keyboard.Alt = new Key(18)
 keyboard.Up = new Key(38)
 keyboard.Left = new Key(37)
 keyboard.Down = new Key(40)

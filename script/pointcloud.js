@@ -67,8 +67,8 @@ var PointCloud = function(gl, ray)
             var x = v3.normalize(v3.cross(z, [0,1,0]));
             var y = v3.normalize(v3.cross(x, z));
 
-            const size = pointSize * Math.pow(v3.distance(camera.position, pos)/10., .5);
-            var bias = Math.random()*0.01;///size;
+            const size = pointSize;// * Math.pow(v3.distance(camera.position, pos)/10., .5);
+            var bias = 0.;//Math.random()*0.01;///size;
             
             for (var v = 0; v < 4; ++v)
             {

@@ -3,7 +3,7 @@ var Ray = function(gl)
 {
     // Parameters
     this.cursorSize = 32;
-    this.dimension = 512;
+    this.dimension = 128;
 
     // Cursor brush
     this.cursor = 0;

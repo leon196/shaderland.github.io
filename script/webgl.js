@@ -83,7 +83,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.cullFace(gl.BACK);
 		
 		// render scene
-		draw(materials["line"], grid, gl.LINES);
+		// draw(materials["line"], grid, gl.LINES);
 		pointClouds.forEach(pointCloud => {
 			draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
 		});
@@ -107,11 +107,11 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// loop
 		requestAnimationFrame(render);
 
-		debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
-		debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256) + " vertices";
-		debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256/2) + " triangles";
-		debug.innerHTML += "<br/>" + camera.volumeNormal[0].toFixed(2) + " " + camera.volumeNormal[1].toFixed(2) + " " + camera.volumeNormal[2].toFixed(2);
-		debug.innerHTML += "<br/>" + camera.volumeDistance;
+		// debug.innerHTML = "FPS: " + Math.round(1./deltaTime);
+		// debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256) + " vertices";
+		// debug.innerHTML += "<br/>" + formatBigNumber(pointClouds.length*256*256/2) + " triangles";
+		// debug.innerHTML += "<br/>" + camera.volumeNormal[0].toFixed(2) + " " + camera.volumeNormal[1].toFixed(2) + " " + camera.volumeNormal[2].toFixed(2);
+		// debug.innerHTML += "<br/>" + camera.volumeDistance;
 	}
 
 	function draw(material, geometry, mode)

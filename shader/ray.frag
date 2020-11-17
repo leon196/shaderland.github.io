@@ -96,7 +96,7 @@ float fbm (vec3 p) {
   float amplitude = 0.5;
   float result = 0.0;
   for (float index = 0.0; index <= 3.0; ++index) {
-    result += pow(abs(sin(noise(p / amplitude) * PI * 8.)), .1) * amplitude;
+    result += pow(abs(sin(noise(p / amplitude) * PI * 8.)), .5) * amplitude;
     amplitude /= 2.;
   }
   return result;
@@ -153,7 +153,8 @@ float cavern(vec3 p)
     }
     scene = -scene;
     scene = max(-length(pp)+1., scene);
-    scene = max(-length(pp.xy)+.2, scene);
+    scene = max(-length(pp.xy)+.4, scene);
+    scene -= fbm(pp*1.)*0.2;
     return scene;
 }
 
@@ -161,13 +162,13 @@ float city(vec3 p)
 {
     vec3 pp = p;
 
-    // p = repeat(p, 5.);
+    p = repeat(p, 5.);
     float scene = 100.0;
     float shape = 100.0;
     rough = 0.1;
     float r = .5;
     float a = 1.0;
-    float t =  seed;// + hash13(floor(pp*5.)) * 3.;//+tick*.001;
+    float t =  seed;// + hash13(floor(pp*10.)) * 3.;//+tick*.001;
     const int count = 12;
     for (int index = 0; index < count; ++index)
     {
@@ -190,8 +191,8 @@ float map(vec3 p)
 {
     float scene = 100.0;
     // scene = kif(p);
-    scene = cavern(p);
-    // scene = city(p);
+    // scene = cavern(p);
+    scene = city(p);
     // scene = p.y-1.*fbm(p*.3);
     return scene;
 }
@@ -214,6 +215,7 @@ void main()
     }
 
     vec2 uv = (texcoord*2.-1.);
+    // uv = normalize(uv) * pow(length(uv), 5.0);
     float dither = hash12(texcoord * frameResolution + seed);
 
     float total = 0.0;
@@ -231,7 +233,7 @@ void main()
     vec4 color = vec4(0);
 
     const int steps = 40;
-    const int rebounces = 1;
+    const int rebounces = 2;
     int bounces = rebounces;
 
     for (int index = 0; index < steps; ++index)
@@ -254,7 +256,7 @@ void main()
 
                 vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2);
                 // palette *= mod(material, 2.);
-                rough = .5;
+                rough = 1.0;//mod(material, 2.);
                 color.rgb += palette * pow(shade, 1.2);
 
                 // last hit

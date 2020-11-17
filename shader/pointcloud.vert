@@ -27,7 +27,7 @@ void main ()
 	// float fade = smoothstep(0.5, 0.0, length(camera - center.xyz));
 	// pos.xyz = mix(pos.xyz, center.xyz, fade);
 	float shade = abs(dot(normal.xyz, normalize(position.xyz-camera)));
-	shade = shade * 0.5 + 0.5;
+	// shade = shade * 0.5 + 0.5;
 	gl_Position = viewProjection * position;
 	vColor = color * shade;
 }
