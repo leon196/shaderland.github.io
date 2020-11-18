@@ -12,6 +12,19 @@ var geometry = {
         return attributes;
     },
 
+    points2: function(dimension)
+    {
+        var attributes = { position: [] };
+        for (var index = 0; index < dimension*dimension; ++index)
+        {
+            attributes.position.push(
+                (Math.floor(index % dimension)/dimension),
+                (Math.floor(index / dimension)/dimension),
+                0);
+        }
+        return attributes;
+    },
+
     pointmap: function(dimension)
     {
         var attributes = { position:[], texcoord: [] };

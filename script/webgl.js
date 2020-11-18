@@ -15,6 +15,7 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 
 	const grid = twgl.createBufferInfoFromArrays(gl, geometry.grid([10,10], [10,10]));
 	const ray = new Ray(gl);
+	const points = twgl.createBufferInfoFromArrays(gl, geometry.points2(128));
 	const pointClouds = [];
 	const count = 32;
 	for (var i = 0; i < count; ++i) pointClouds.push(new PointCloud(gl, ray));
@@ -55,24 +56,29 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		// camera
 		camera.update(deltaTime);
 
-		// if (keyboard.Space.down)
+		// if (uniforms.tick < 2 || uniforms.tick % 10 == 0)
+		// if (uniforms.tick < 2 || keyboard.Space.down || keyboard.R.down)
 		{
-			const pointcloud = pointClouds[current];
-			uniforms.spot = pointcloud.spot;
+			keyboard.Space.down = false;
 			uniforms.frameResolution = [ray.dimension, ray.dimension];
-			uniforms.cursor = [ray.cursorRect[0], ray.cursorRect[1]];
-			uniforms.cameraVelocity = camera.velocity;
+			uniforms.fieldOfView = 1.;
 			ray.update(gl);
-			pointcloud.update(gl, ray);
-			if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)
-			{
-				current = (current + 1) % pointClouds.length;
-			}
 			
-			gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.feedback.framebuffer);
-			gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, feedback);
-			camera.volumeNormal = [feedback[0], feedback[1], feedback[2]];
-			camera.volumeDistance = feedback[3];
+			uniforms.framePosition = ray.frame.position.attachments[0];
+			uniforms.frameColor = ray.frame.color.attachments[0];
+			uniforms.frameNormal = ray.frame.normal.attachments[0];
+			uniforms.frameFeedback = ray.frame.feedback.attachments[0];
+
+			// pointClouds[current].update(gl, ray);
+			// if ((uniforms.tick * ray.cursorSize * ray.cursorSize) % (128*128) == 0)
+			// {
+			// 	current = (current + 1) % pointClouds.length;
+			// }
+			
+			// gl.bindFramebuffer(gl.FRAMEBUFFER, ray.frame.feedback.framebuffer);
+			// gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, feedback);
+			// camera.volumeNormal = [feedback[0], feedback[1], feedback[2]];
+			// camera.volumeDistance = feedback[3];
 		}
 		
 		
@@ -83,10 +89,12 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		gl.cullFace(gl.BACK);
 		
 		// render scene
-		// draw(materials["line"], grid, gl.LINES);
-		pointClouds.forEach(pointCloud => {
-			draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
-		});
+		draw(materials["line"], grid, gl.LINES);
+		// pointClouds.forEach(pointCloud => {
+		// 	draw(materials['pointcloud'], pointCloud.buffer, gl.TRIANGLES);
+		// });
+
+		draw(materials['point'], points, gl.POINTS);
 		
 		// final render
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -98,10 +106,6 @@ loadFiles('shader/',['screen.vert','screen.frag','test.frag','geometry.vert','co
 		
 		// post process
 		uniforms.scene = scene.attachments[0];
-		uniforms.framePosition = ray.frame.position.attachments[0];
-		uniforms.frameColor = ray.frame.color.attachments[0];
-		uniforms.frameNormal = ray.frame.normal.attachments[0];
-		uniforms.frameFeedback = ray.frame.feedback.attachments[0];
 		draw(materials['screen'], quad, gl.TRIANGLES);
 		
 		// loop

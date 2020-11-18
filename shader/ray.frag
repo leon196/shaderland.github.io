@@ -1,9 +1,9 @@
 precision mediump float;
 
-uniform sampler2D blueNoise;
+uniform sampler2D framePosition;
 uniform vec3 camera, cameraVelocity, target, ray, spot;
 uniform vec2 resolution, frameResolution, cursor;
-uniform float time, tick, seed, count, currentFrame;
+uniform float time, tick, seed, count, currentFrame, fieldOfView;
 uniform float mode;
 uniform vec4 frameRect;
 
@@ -13,6 +13,7 @@ const float MODE_POSITION = 0.0;
 const float MODE_COLOR = 1.0;
 const float MODE_NORMAL = 2.0;
 const float MODE_FEEDBACK = 3.0;
+const float MODE_INIT = 4.0;
 
 float material;
 float rough;
@@ -69,7 +70,7 @@ vec3 look(vec3 from, vec3 to, vec2 uv)
     vec3 z = normalize(to-from);
     vec3 x = normalize(cross(z,vec3(0,1,0)));
     vec3 y = normalize(cross(z,x));
-    return normalize(z * 2. + x * uv.x + y * uv.y);
+    return normalize(z * fieldOfView + x * uv.x + y * uv.y);
 }
 
 mat2 rot(float a)
@@ -107,20 +108,21 @@ float kif(vec3 p)
     float scene = 100.0;
     float shape = 100.0;
     rough = 0.;
-    float r = 1.5;
+    float r = 1.;
     float a = 1.0;
-    float t =  seed;// + time * .1;//+fract(tick/100.)*.2;//+tick*.001;
-    const int count = 16;
+    float t =  seed + time;// + hash13(p) * 0.1;//+fract(tick/100.)*.2;//+tick*.001;
+    const int count = 4;
     for (int index = 0; index < count; ++index)
     {
-        p.x = abs(p.x)-r*a;
-        p.xz *= rot(t/a);
-        p.yz *= rot(sin(t/a));
-        shape = length(p)-0.85*a;
-        // shape = box(p, vec3(0.1*a));
+        p.xz = abs(p.xz)-r*a;
+        // p.x = (p.x)-r*a;
+        p.xz *= rot(t);
+        p.yz *= rot(sin(t));
+        // shape = length(p)-0.3*a;
+        shape = box(p, vec3(0.5*a));
         material = shape < scene ? float(index) : material;
         scene = min(scene, shape);
-        a /= 1.2;
+        a /= 1.5;
     }
     return scene;
 }
@@ -154,7 +156,9 @@ float cavern(vec3 p)
     scene = -scene;
     scene = max(-length(pp)+1., scene);
     scene = max(-length(pp.xy)+.4, scene);
-    scene -= fbm(pp*1.)*0.2;
+    float n = fbm(pp*1.);
+    material = n * 10.;
+    scene -= n*0.2;
     return scene;
 }
 
@@ -162,7 +166,7 @@ float city(vec3 p)
 {
     vec3 pp = p;
 
-    p = repeat(p, 5.);
+    // p = repeat(p, 5.);
     float scene = 100.0;
     float shape = 100.0;
     rough = 0.1;
@@ -190,9 +194,11 @@ float city(vec3 p)
 float map(vec3 p)
 {
     float scene = 100.0;
-    // scene = kif(p);
+    // scene = box(repeat(p+1., 2.), vec3(.3));
+    scene = kif(p);
+    // scene = length(p) - 0.5;
     // scene = cavern(p);
-    scene = city(p);
+    // scene = city(p);
     // scene = p.y-1.*fbm(p*.3);
     return scene;
 }
@@ -201,6 +207,29 @@ vec3 getNormal(vec3 p)
 {
 	vec2 e = vec2(.001, 0.);
 	return normalize(.00001+vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx)));
+}
+
+// Alan Zucconi
+// https://www.alanzucconi.com/2016/07/01/ambient-occlusion/
+float ambientOcclusion (vec3 pos, vec3 normal)
+{
+    float sum = 0.;
+    float maxSum = 0.;
+    float _AOStepSize = 0.1;
+    for (int i = 0; i < 10; i ++)
+    {
+        vec3 p = pos + normal * float(i+1) * _AOStepSize;
+        sum    += 1. / pow(2., float(i)) * map(p);
+        maxSum += 1. / pow(2., float(i)) * float(i+1) * _AOStepSize;
+    }
+    return sum / maxSum;
+}
+
+void main2()
+{
+    // vec3 pos = texture2D(framePosition, texcoord+vec2(cos(time)*0.1,0)).xyz;
+    vec3 hoy = vec3(step(length(texcoord*2.-1.), 0.5));
+    gl_FragColor = vec4(hoy, 1);//mix(pos, hoy, 0.1), 1);
 }
 
 void main()
@@ -214,23 +243,25 @@ void main()
         return;
     }
 
-    vec2 uv = (texcoord*2.-1.);
-    // uv = normalize(uv) * pow(length(uv), 5.0);
-    float dither = hash12(texcoord * frameResolution + seed);
+    vec2 pixel = texcoord * frameResolution;
+    float dither = hash12(pixel + seed);
 
     float total = 0.0;
     float shade = 1.0;
+    float ao = 1.0;
     material = 0.;
     rough = 0.0;
 
-    vec3 eye = camera;
-    vec3 at = target;
-    at += (hash32(texcoord*1654.+tick+seed)*2.-1.)*.1;
-    eye += (hash32(texcoord*1328.+tick+seed)*2.-1.)*.1;
-    vec3 ray = look(eye, at, uv);
-    vec3 pos = eye;// + ray * dither * 0.5;
+    vec3 pos = vec3(0);
     vec3 normal = vec3(0,1,0);
     vec4 color = vec4(0);
+
+    vec3 eye = vec3(0.01,3,0);//camera;
+    vec3 at = vec3(0);//target;
+    // at += (hash32(pixel+seed)*2.-1.)*.01;
+    // eye += (hash32(pixel+seed+10.)*2.-1.)*.01;
+    vec3 ray = look(eye, at, (texcoord*2.-1.));
+    pos = eye;
 
     const int steps = 40;
     const int rebounces = 2;
@@ -247,29 +278,33 @@ void main()
             }
             else if (mode == MODE_COLOR)
             {
+                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material-1.0);
+                // palette *= mod(material, 2.);
+
                 // first hit
                 if (bounces == rebounces)
                 {
                     shade = float(steps-index)/float(steps);
                     normal = getNormal(pos);
+                    ao = clamp(ambientOcclusion(pos, normal), 0., 1.);
                 }
 
-                vec3 palette = vec3(.5)+vec3(.5)*cos(vec3(1,2,3)*material*0.2);
-                // palette *= mod(material, 2.);
-                rough = 1.0;//mod(material, 2.);
-                color.rgb += palette * pow(shade, 1.2);
+                rough = 2.;//mod(material, 2.);
+                color.rgb += palette;// * pow(shade, 1.2);
+                // color.rgb += vec3(1);// * shade;
 
                 // last hit
                 if (--bounces == 0)
                 {
                     color.rgb /= float(rebounces);
+                    color.rgb *= ao;
                     // color.rgb *= shade;
                     break;
                 }
                 // bounce
                 else
                 {
-                    vec3 rn = (hash33(pos*1000.+tick)*2.-1.);
+                    vec3 rn = (hash33(pos*1000.)*2.-1.);
                     if (dot(rn, normal) < 0.0) { rn *= -1.0; }
                     ray = normalize(reflect(ray, normal) + rn * rough);
                     dist = 0.1;//*dither;
@@ -286,11 +321,6 @@ void main()
                 color = vec4(pos, 1);
                 break;
             }
-            // else if (mode == MODE_FEEDBACK)
-            // {
-            //     color = vec4(getNormal(camera), map(camera));
-            //     break;
-            // }
         }
         dist *= 0.9 + 0.1 * dither;
         total += dist;

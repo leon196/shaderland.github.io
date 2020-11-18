@@ -2,7 +2,7 @@
 var Ray = function(gl)
 {
     // Parameters
-    this.cursorSize = 32;
+    this.cursorSize = 128;
     this.dimension = 128;
 
     // Cursor brush
@@ -18,7 +18,16 @@ var Ray = function(gl)
         normal: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
         color: twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
         feedback: twgl.createFramebufferInfo(gl, attachments, 4, 4),
-    }
+    };
+
+    this.feedback = {
+        position: [
+            twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
+            twgl.createFramebufferInfo(gl, attachments, this.dimension, this.dimension),
+        ],
+    };
+
+    this.feedbackIndex = 0;
 
     this.quad = twgl.createBufferInfoFromArrays(gl, primitive.quad);
 
@@ -37,6 +46,13 @@ var Ray = function(gl)
 
         uniforms.samplingSeed = this.samplingSeed;
             
+        // uniforms.mode = 0;
+        // if (keyboard.R.down) uniforms.mode = 4;
+        // uniforms.framePosition = this.feedback.position[this.feedbackIndex].attachments[0];
+        // this.feedbackIndex = (this.feedbackIndex+1)%2;
+        // gl.bindFramebuffer(gl.FRAMEBUFFER, this.feedback.position[this.feedbackIndex].framebuffer);
+        // this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
+
         uniforms.mode = 0;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.frame.position.framebuffer);
         this.render(gl, materials['ray'], this.quad, gl.TRIANGLES);
